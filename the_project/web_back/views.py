@@ -2,6 +2,7 @@ from django.shortcuts import render,HttpResponse
 from django.http import JsonResponse,Http404
 from django.contrib.auth import authenticate
 from django.db import connection
+import datetime
 
 from rest_framework.views import APIView
 
@@ -9,6 +10,7 @@ from .models import *
 
 
 # Create your views here.
+############################################ 로그인 관련
 class user_regist(APIView):     #회원가입
     def post(self,request):
         data_table = UserData()     #유저 테이블에 접근 및 가르키는 레퍼런스
@@ -62,7 +64,11 @@ class user_login(APIView):      #로그인
             return JsonResponse({'login_message':'아이디가 틀렸습니다.'},status=200)
 
 
-        
+
+############################################ 마이페이지 관련
+ 
+
+
 class name_change(APIView):      #닉네임 변경
     def post(self,request):
         chk = UserData.objects.all()        #유저 테이블의 모든 객체를 가져옴
@@ -80,24 +86,33 @@ class pass_change(APIView):      #비밀번호 변경
         chk = UserData.objects.all()        #유저 테이블의 모든 객체를 가져옴
         old_pass = chk.filter(user_id = request.data.get("id")).values('user_pass')
         if old_pass.filter(user_pass = request.data.get("old_pw")).exists():    #그리고, 그 아이디에 해당하는 비밀번호가 존재 할 경우
-            change_name = UserData.objects.get(user_id = request.data.get("id") )
-            change_name.user_pass = request.data.get("new_pw")
-            change_name.save()
+            change_pass = UserData.objects.get(user_id = request.data.get("id") )
+            change_pass.user_pass = request.data.get("new_pw")
+            change_pass.save()
             return JsonResponse({'chk_message':'비밀번호가 변경되었습니다.'},status=200)
         else:
             return JsonResponse({'chk_message':'비밀번호가 틀렸습니다.'},status=200)
 
 
 
-class email_change(APIView):      #이메일 변경(기존 닉네임 변경에서 코드만 살짝 수정함. 그래서 변수명은 닉네임 변경과 동일)
+class email_change(APIView):      #이메일 변경(기존 닉네임 변경에서 코드만 살짝 수정함.)
     def post(self,request):
         chk = UserData.objects.all()        #유저 테이블의 모든 객체를 가져옴
         if chk.filter(user_name = request.data.get("email")).exists():       #이메일 중복체크
             return JsonResponse({'chk_message':'이메일 중복입니다.'},status=200)
-        change_name = UserData.objects.get(user_id = request.data.get("id") )
-        change_name.user_name = request.data.get("email")
-        change_name.save()
+        change_email = UserData.objects.get(user_id = request.data.get("id") )
+        change_email.user_email = request.data.get("email")
+        change_email.save()
         return JsonResponse({'chk_message':'이메일이 변경되었습니다.'},status=200)
+
+
+
+class comment_change(APIView):      #코맨트 변경(기존 닉네임 변경에서 코드만 살짝 수정함.)
+    def post(self,request):
+        change_comment = UserData.objects.get(user_id = request.data.get("id") )
+        change_comment.user_comment = request.data.get("comment")
+        change_comment.save()
+        return JsonResponse({'chk_message':'코맨트가 변경되었습니다.'},status=200)
 
 
     
@@ -113,3 +128,31 @@ class into_mypage(APIView):      #비밀번호 변경
         connection.close()                          #데이터베이스 접속 해제
 
         return JsonResponse({'user_data':data})    #data 자체는 튜플형식이나 json으로 보내지는 과정에서 알아서 배열로 바뀌는듯함. 프론트로에서 배열로 값이 왔다고함.
+
+
+
+############################################ 팀 관련
+
+
+
+class make_a_team(APIView):      #팀 생성
+    def post(self,request):
+        chk = TeamData.objects.all()
+        if chk.filter(team_name = request.data.get("teamname")).exists():       #팀이름 중복체크
+            return JsonResponse({'chk_message':'팀 이름이 중복입니다.'},status=200)
+        #팀 기본 정보
+        team_data = TeamData()
+        team_data.team_name = request.data.get("teamname")          #팀명
+        team_data.user = request.data.get("id")                     #팀장 아이디
+        team_data.introduction = request.data.get("teamdesc")       #팀 소개
+        team_data.team_category = request.data.get("teamcategory")  #팀 카테고리
+        team_data.team_make_time = datetime.date.today()            #생성한 년 월 일에 대한 정보
+        team_data.save()
+        #팀원 정보
+        team_user_data = TeamUserData()
+        team_user_data.user = request.data.get("id")                #유저 이름
+        team_user_data.tema_name = request.data.get("teamname")     #팀명
+        team_user_data.is_admin = '1'
+        team_user_data.save()
+        
+        return JsonResponse({'chk_message':'팀 생성이 완료되었씁니다.'})
