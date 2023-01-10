@@ -1,6 +1,7 @@
 from django.shortcuts import render,HttpResponse
 from django.http import JsonResponse,Http404
 from django.contrib.auth import authenticate
+from django.db import connection
 
 from rest_framework.views import APIView
 
@@ -17,11 +18,15 @@ class user_regist(APIView):     #회원가입
                 return JsonResponse({'chk_message':'아이디 중복입니다.'},status=200)
             if chk.filter(user_name = request.data.get("nickname")).exists():       #닉네임 중복체크
                 return JsonResponse({'chk_message':'닉네임 중복입니다.'},status=200)
+            if chk.filter(user_email = request.data.get("email")).exists():       #닉네임 중복체크
+                return JsonResponse({'chk_message':'이메일 중복입니다.'},status=200)
             else:       #모든 중복 체크 통과시
                 data_table.user_id = request.data.get("id")             #아이디 저장
                 data_table.user_pass = request.data.get("pw")           #비밀번호 저장
                 data_table.user_name = request.data.get("nickname")     #닉네임 저장
+                data_table.user_email = request.data.get("email")
 
+                data_table.user_comment = '아직 소개말이 입력되지 않았습니다.'
                 data_table.user_admin = '0'     #관리자 여부
                 data_table.login_state = '0'    #접속 여부
                 data_table.save()               #입력된 데이터 저장
@@ -81,3 +86,30 @@ class pass_change(APIView):      #비밀번호 변경
             return JsonResponse({'chk_message':'비밀번호가 변경되었습니다.'},status=200)
         else:
             return JsonResponse({'chk_message':'비밀번호가 틀렸습니다.'},status=200)
+
+
+
+class email_change(APIView):      #이메일 변경(기존 닉네임 변경에서 코드만 살짝 수정함. 그래서 변수명은 닉네임 변경과 동일)
+    def post(self,request):
+        chk = UserData.objects.all()        #유저 테이블의 모든 객체를 가져옴
+        if chk.filter(user_name = request.data.get("email")).exists():       #이메일 중복체크
+            return JsonResponse({'chk_message':'이메일 중복입니다.'},status=200)
+        change_name = UserData.objects.get(user_id = request.data.get("id") )
+        change_name.user_name = request.data.get("email")
+        change_name.save()
+        return JsonResponse({'chk_message':'이메일이 변경되었습니다.'},status=200)
+
+
+    
+class into_mypage(APIView):      #비밀번호 변경
+    def post(self,request):
+        cursor = connection.cursor()
+        #장고의 데이터베이스 연결 방식에서 파이썬 특유의 데이터베이스 연결 방식으로 코드를 바꿔봄.
+        #사용해본 결과 데이터 입력 시에는 orm이 편한데. select문에 한해서는 쿼리문이 더편함
+        sql_statement = "select user_email, user_comment from user_data where user_id ='" + request.data.get("id") + "';"       #입력한 아이디값에 맞는 이메일과 소개문을 반환
+        result = cursor.execute(sql_statement)      #코드 실행
+        data = cursor.fetchall()                   #실행 결과 입력
+        connection.commit()                         #데이터베이스 변경 완료
+        connection.close()                          #데이터베이스 접속 해제
+
+        return JsonResponse({'user_data':data})    #data 자체는 튜플형식이나 json으로 보내지는 과정에서 알아서 배열로 바뀌는듯함. 프론트로에서 배열로 값이 왔다고함.
