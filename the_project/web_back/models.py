@@ -31,6 +31,7 @@ class TeamData(models.Model):
     user = models.ForeignKey('UserData', models.DO_NOTHING)
     introduction = models.CharField(max_length=1024, blank=True, null=True)
     team_make_time = models.DateTimeField()
+    team_category = models.CharField(max_length=128)
 
     class Meta:
         managed = False
