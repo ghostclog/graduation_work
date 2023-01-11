@@ -3,7 +3,7 @@ from django.db import models
 # Create your models here.
 
 class CommentData(models.Model):
-    comment_id = models.IntegerField(primary_key=True)
+    comment_id = models.AutoField(primary_key=True)
     comment_cont = models.CharField(max_length=1024)
     user = models.ForeignKey('UserData', models.DO_NOTHING)
     post = models.ForeignKey('PostData', models.DO_NOTHING)
@@ -39,14 +39,14 @@ class TeamData(models.Model):
 
 
 class TeamUserData(models.Model):
-    user = models.OneToOneField('UserData', models.DO_NOTHING, primary_key=True)
+    pr_key = models.AutoField(primary_key=True)
     tema_name = models.ForeignKey(TeamData, models.DO_NOTHING, db_column='tema_name')
+    user = models.ForeignKey('UserData', models.DO_NOTHING)
     is_admin = models.CharField(max_length=1)
 
     class Meta:
         managed = False
         db_table = 'team_user_data'
-        unique_together = (('user', 'tema_name'),)
 
 
 class UserData(models.Model):

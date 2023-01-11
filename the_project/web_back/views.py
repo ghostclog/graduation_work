@@ -121,13 +121,18 @@ class into_mypage(APIView):      #비밀번호 변경
         cursor = connection.cursor()
         #장고의 데이터베이스 연결 방식에서 파이썬 특유의 데이터베이스 연결 방식으로 코드를 바꿔봄.
         #사용해본 결과 데이터 입력 시에는 orm이 편한데. select문에 한해서는 쿼리문이 더편함
-        sql_statement = "select user_email, user_comment from user_data where user_id ='" + request.data.get("id") + "';"       #입력한 아이디값에 맞는 이메일과 소개문을 반환
-        result = cursor.execute(sql_statement)      #코드 실행
-        data = cursor.fetchall()                   #실행 결과 입력
+        sql_statement1 = "select user_email, user_comment from user_data where user_id ='" + request.data.get("id") + "';"       #입력한 아이디값에 맞는 이메일과 소개문을 반환
+        result1 = cursor.execute(sql_statement1)      #코드 실행
+        data1 = cursor.fetchall()                   #실행 결과 입력
+
+        sql_statement2 = "select tema_name, count(*) from team_user_data where user_id = '" + request.data.get("id") + "' group by tema_name;"  #해당 유저가 속한 팀의 리스트를 보여주는 코드.
+        result2 = cursor.execute(sql_statement2)      #코드 실행
+
+        data2 = cursor.fetchall()                   #실행 결과 입력
         connection.commit()                         #데이터베이스 변경 완료
         connection.close()                          #데이터베이스 접속 해제
 
-        return JsonResponse({'user_data':data})    #data 자체는 튜플형식이나 json으로 보내지는 과정에서 알아서 배열로 바뀌는듯함. 프론트로에서 배열로 값이 왔다고함.
+        return JsonResponse({'user_data':data1,'team_data':data2})    #data 자체는 튜플형식이나 json으로 보내지는 과정에서 알아서 배열로 바뀌는듯함. 프론트로에서 배열로 값이 왔다고함.
 
 
 
@@ -142,17 +147,18 @@ class make_a_team(APIView):      #팀 생성
             return JsonResponse({'chk_message':'팀 이름이 중복입니다.'},status=200)
         #팀 기본 정보
         team_data = TeamData()
-        team_data.team_name = request.data.get("teamname")          #팀명
-        team_data.user = request.data.get("id")                     #팀장 아이디
-        team_data.introduction = request.data.get("teamdesc")       #팀 소개
-        team_data.team_category = request.data.get("teamcategory")  #팀 카테고리
-        team_data.team_make_time = datetime.date.today()            #생성한 년 월 일에 대한 정보
+        team_data.team_name = request.data.get("teamname")                      #팀명
+        team_data.user = UserData.objects.get(pk = request.data.get("id"))      #팀장 아이디
+        team_data.introduction = request.data.get("teamdesc")                   #팀 소개
+        team_data.team_category = request.data.get("teamcategory")              #팀 카테고리
+        team_data.team_make_time = datetime.date.today()                        #생성한 년 월 일에 대한 정보
         team_data.save()
         #팀원 정보
         team_user_data = TeamUserData()
-        team_user_data.user = request.data.get("id")                #유저 이름
-        team_user_data.tema_name = request.data.get("teamname")     #팀명
+        team_user_data.user = UserData.objects.get(pk = request.data.get("id"))                 #유저 이름
+        team_user_data.tema_name = TeamData.objects.get(pk = request.data.get("teamname"))      #팀명
+        
         team_user_data.is_admin = '1'
         team_user_data.save()
         
-        return JsonResponse({'chk_message':'팀 생성이 완료되었씁니다.'})
+        return JsonResponse({'chk_message':'팀 생성이 완료되었습니다.'})
