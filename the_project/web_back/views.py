@@ -162,3 +162,43 @@ class make_a_team(APIView):      #팀 생성
         team_user_data.save()
         
         return JsonResponse({'chk_message':'팀 생성이 완료되었습니다.'})
+
+
+
+class team_list1(APIView):             #팀원에 대한 정보(이름, 팀장 여부)를 보여줌
+    def post(self,request):
+        cursor = connection.cursor()
+        sql_statement = "select user_id, is_admin from team_user_data where tema_name = '" + request.data.get("teamname") + "' order by is_admin desc;"
+        #해당 팀에 속한 팀원들 이름과 팀장 여부를 출력하는 쿼리문
+        result = cursor.execute(sql_statement)      #코드 실행
+        data = cursor.fetchall()                   #실행 결과 입력
+
+        connection.commit()                         #데이터베이스 변경 완료
+        connection.close()                          #데이터베이스 접속 해제
+
+        return JsonResponse({'user_data':data})
+
+
+    
+class team_list2(APIView):              #팀명 / 타임스탬프 / 팀원에 대한 정보를 보여주는 상세한 팀 리스트
+    def post(self,request):
+        result_list = []
+        cursor = connection.cursor()
+
+        sql_statement1 = "select a.team_name, DATE_FORMAT(a.team_make_time,'%Y/%m/%d') from team_data a, team_user_data b where a.team_name = b.tema_name and b.user_id = '" + request.data.get("id") + "';"
+        #팀명과 타임스탬프
+        result = cursor.execute(sql_statement1)      #코드 실행
+        team_data = cursor.fetchall()                #실행 결과 입력
+        for i in team_data:
+            small_list = []
+            team_user_sql = "select user_id from team_user_data where tema_name = '" + i[0] + "';"
+            #해당 팀에 속한 팀원을 보여줌
+            result = cursor.execute(team_user_sql)      #코드 실행
+            team_user_data = cursor.fetchall()          #실행 결과 입력
+
+            small_list.append(i)
+            small_list.append(team_user_data)
+            result_list.append(small_list)
+
+        return JsonResponse({'user_data':result_list})
+        #팀에 대한 정보(팀명, 타임스탬프)와 팀원에 대한 정보를 함께 전달해주기 위해 for문을 사용함.

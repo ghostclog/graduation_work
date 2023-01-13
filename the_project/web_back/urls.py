@@ -16,8 +16,8 @@ urlpatterns = [
     path('comment_ch/', views.comment_change.as_view() ,name='comment_change'),
     
     #팀 관련
-    path('make_team/', views.make_a_team.as_view() ,name='comment_change'),
-
-
+    path('make_team/', views.make_a_team.as_view() ,name='make_team'),
+    path('TU_list/', views.team_list1.as_view() ,name='summary_team_list'),
+    path('detail_team_list/', views.team_list2.as_view() ,name='detail_team_list'),
 
 ]
