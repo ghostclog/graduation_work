@@ -1,4 +1,7 @@
 from django.urls import path
+from django.conf.urls.static import static
+from django.conf import settings
+
 from . import views
 
 
@@ -19,5 +22,8 @@ urlpatterns = [
     path('make_team/', views.make_a_team.as_view() ,name='make_team'),
     path('TU_list/', views.team_list1.as_view() ,name='summary_team_list'),
     path('detail_team_list/', views.team_list2.as_view() ,name='detail_team_list'),
-
+    path('detail_team_list2/', views.team_list3.as_view() ,name='detail_team_list'),
+    path('team_authority/', views.team_authority.as_view() ,name='detail_team_list'),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

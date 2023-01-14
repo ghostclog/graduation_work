@@ -151,7 +151,8 @@ class make_a_team(APIView):      #팀 생성
         team_data.user = UserData.objects.get(pk = request.data.get("id"))      #팀장 아이디
         team_data.introduction = request.data.get("teamdesc")                   #팀 소개
         team_data.team_category = request.data.get("teamcategory")              #팀 카테고리
-        team_data.team_make_time = datetime.date.today()                        #생성한 년 월 일에 대한 정보
+        
+        team_data.team_make_time = datetime.datetime.now()                      #생성한 년 월 일에 대한 정보
         team_data.save()
         #팀원 정보
         team_user_data = TeamUserData()
@@ -202,3 +203,41 @@ class team_list2(APIView):              #팀명 / 타임스탬프 / 팀원에 �
 
         return JsonResponse({'user_data':result_list})
         #팀에 대한 정보(팀명, 타임스탬프)와 팀원에 대한 정보를 함께 전달해주기 위해 for문을 사용함.
+
+
+
+class team_list3(APIView):              #타임스탬프 / 팀소개 / 팀카테고리 /팀원에 대한 정보를 보여주는 상세한 팀 리스트
+    def post(self,request):
+        data_list = []
+        cursor = connection.cursor()
+        sql_statement1 = "select introduction,DATE_FORMAT(team_make_time,'%Y/%m/%d'),team_category from team_data where team_name = '" + request.data.get("teamname") + "';"
+        result = cursor.execute(sql_statement1)     
+        team_data = cursor.fetchall()       
+        data_list.append(team_data)
+        
+        sql_statement2 = "select user_id from team_user_data where tema_name = '" + request.data.get("teamname") + "';"
+        result = cursor.execute(sql_statement2)     
+        team_user_data = cursor.fetchall()       
+        data_list.append(team_user_data)
+        return JsonResponse({'data':data_list})
+        
+
+
+class team_authority(APIView):
+    def post(self,request):
+        cursor = connection.cursor()
+        sql_statement1 = "select is_admin from team_user_data where user_id = '" + request.data.get("id") + "' and tema_name = '" + request.data.get("teamname") + "';"
+        result = cursor.execute(sql_statement1)     
+        authority = cursor.fetchall()       
+        if len(authority) == 0:
+            authority = ['-1']
+            return JsonResponse({'data':authority})
+        return JsonResponse({'data':authority[0]})
+
+
+
+class delete_team_user(APIView):
+    def post(self,request):
+        tema_user = TeamUserData.objects.get(pk=request.data.get("id"))
+        tema_user.delete()
+        return JsonResponse({'chk_message':'해당 팀원이 추방되었습니다!'})
