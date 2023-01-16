@@ -14,16 +14,22 @@ class CommentData(models.Model):
         db_table = 'comment_data'
 
 
+
 class PostData(models.Model):
     post_id = models.IntegerField(primary_key=True)
     category = models.CharField(max_length=45)
     user = models.ForeignKey('UserData', models.DO_NOTHING)
-    contents_data = models.TextField(blank=True, null=True)
-    post_time = models.DateTimeField(blank=True, null=True)
+    contents_data = models.TextField()
+    post_time = models.DateTimeField()
+    team_name = models.ForeignKey('TeamData', models.DO_NOTHING, db_column='team_name', blank=True, null=True)
+    num_of_open = models.IntegerField()
+    num_of_recommend = models.IntegerField()
+    post_title = models.CharField(max_length=1024, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'post_data'
+
 
 
 class TeamData(models.Model):
@@ -38,6 +44,7 @@ class TeamData(models.Model):
         db_table = 'team_data'
 
 
+
 class TeamUserData(models.Model):
     pr_key = models.AutoField(primary_key=True)
     tema_name = models.ForeignKey(TeamData, models.DO_NOTHING, db_column='tema_name')
@@ -47,6 +54,7 @@ class TeamUserData(models.Model):
     class Meta:
         managed = False
         db_table = 'team_user_data'
+
 
 
 class UserData(models.Model):
@@ -61,3 +69,9 @@ class UserData(models.Model):
     class Meta:
         managed = False
         db_table = 'user_data'
+
+
+
+class Post(models.Model):
+	user_id = models.CharField(primary_key=True, max_length=50)
+	photo = models.ImageField(upload_to='media/profile',default='default.jpg')

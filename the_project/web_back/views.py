@@ -125,10 +125,23 @@ class into_mypage(APIView):      #비밀번호 변경
         result1 = cursor.execute(sql_statement1)      #코드 실행
         data1 = cursor.fetchall()                   #실행 결과 입력
 
-        sql_statement2 = "select tema_name, count(*) from team_user_data where user_id = '" + request.data.get("id") + "' group by tema_name;"  #해당 유저가 속한 팀의 리스트를 보여주는 코드.
-        result2 = cursor.execute(sql_statement2)      #코드 실행
+        data2 = []
 
-        data2 = cursor.fetchall()                   #실행 결과 입력
+        sql_statement2 = "select tema_name from team_user_data where user_id = '" + request.data.get("id") + "';"  #해당 유저가 속한 팀의 리스트를 보여주는 코드.
+        result2 = cursor.execute(sql_statement2)      #코드 실행
+        in_team = cursor.fetchall()                   #실행 결과 입력
+
+        sql_statement3 = "select tema_name, count(*) from team_user_data group by tema_name"        #팀별 인원을 보여주는 쿼리문
+        result3 = cursor.execute(sql_statement3)            #코드 실행
+        num_of_mem = cursor.fetchall()                      #실행 결과 입력
+
+        for i in in_team:
+            for j in num_of_mem:
+                if i[0] == j[0]:
+                    data2.append(j)
+
+
+
         connection.commit()                         #데이터베이스 변경 완료
         connection.close()                          #데이터베이스 접속 해제
 
@@ -192,7 +205,7 @@ class team_list2(APIView):              #팀명 / 타임스탬프 / 팀원에 �
         team_data = cursor.fetchall()                #실행 결과 입력
         for i in team_data:
             small_list = []
-            team_user_sql = "select user_id from team_user_data where tema_name = '" + i[0] + "';"
+            team_user_sql = "select user_name from team_user_data a, user_data b where a.user_id = b.user_id and a.tema_name = '" + i[0] + "';"
             #해당 팀에 속한 팀원을 보여줌
             result = cursor.execute(team_user_sql)      #코드 실행
             team_user_data = cursor.fetchall()          #실행 결과 입력
@@ -214,12 +227,13 @@ class team_list3(APIView):              #타임스탬프 / 팀소개 / 팀카테
         result = cursor.execute(sql_statement1)     
         team_data = cursor.fetchall()       
         data_list.append(team_data)
-        
-        sql_statement2 = "select user_id from team_user_data where tema_name = '" + request.data.get("teamname") + "';"
-        result = cursor.execute(sql_statement2)     
-        team_user_data = cursor.fetchall()       
-        data_list.append(team_user_data)
-        return JsonResponse({'data':data_list})
+
+        sql_statement3 = "select a.user_name, a.user_email, a.user_comment, b.is_admin from user_data a, team_user_data b where a.user_id = b.user_id and tema_name = '" + request.data.get("teamname") + "';"
+        result = cursor.execute(sql_statement3)     
+        user_data = cursor.fetchall()
+
+
+        return JsonResponse({'team_data':data_list,'user_datas':user_data})
         
 
 
@@ -236,8 +250,84 @@ class team_authority(APIView):
 
 
 
-class delete_team_user(APIView):
+class delete_team_user(APIView):        #팀원 추방
     def post(self,request):
-        tema_user = TeamUserData.objects.get(pk=request.data.get("id"))
-        tema_user.delete()
-        return JsonResponse({'chk_message':'해당 팀원이 추방되었습니다!'})
+        user_id=UserData.objects.get(user_name=request.data.get("nickname"))
+        user = TeamUserData.objects.get(user=user_id,tema_name = request.data.get("teamname"))
+        user.delete()
+        #팀원 추방 후 화면 갱신을 
+        cursor = connection.cursor()
+        sql_statement3 = "select a.user_name, a.user_email, a.user_comment, b.is_admin from user_data a, team_user_data b where a.user_id = b.user_id and tema_name = '" + request.data.get("teamname") + "';"
+        result = cursor.execute(sql_statement3)     
+        user_data = cursor.fetchall()
+
+        return JsonResponse({'chk_message':'해당 팀원이 추방되었습니다!','datas':user_data})
+
+
+
+class change_team_comment(APIView):     #팀 코맨트 변경
+    def post(self,request):
+        team_data = TeamData.objects.get(team_name = request.data.get("teamname"))
+        team_data.introduction = request.data.get("teamcomment")
+        team_data.save()
+        return JsonResponse({'chk_message':'팀 코맨트가 수정되었습니다.'})
+
+
+
+############################################ 게시글 관련
+
+
+class post_list(APIView):       #게시판 들어갔을때 해당 게시판에 해당되는 글 리스트들 보여주는 코드
+    def post(self,request):
+        list = []
+
+        cursor = connection.cursor()
+
+        sql_statement1 = "select a.post_id, a.post_title, b.user_name, a.num_of_open, a.num_of_recommend, date_format(a.post_time,'%Y-%m-%d %h:%m') from post_data a, user_data b where a.user_id = b.user_id and category = '" + request.data.get("category") + "';"
+        result = cursor.execute(sql_statement1)     
+        data = cursor.fetchall()
+
+        for i in data:      #해당 게시글의 댓글수를 알려주기 위한 부분
+            small_list = []
+
+            sql_statement2 = "select count(*) from comment_data where post_id = " + str(i[0]) + ";"
+            result1 = cursor.execute(sql_statement2)     
+            data1 = cursor.fetchall()
+
+            small_list.append(i)
+            small_list.append(data1[0])
+
+            list.append(small_list)
+
+        return JsonResponse({'post_data':list})
+
+
+
+class the_post(APIView):       #게시글 보는거
+    def post(self,request):
+
+        cursor = connection.cursor()
+        sql_statement1 = "select a.post_title, b.user_name, a.num_of_open, a.num_of_recommend, a.contents_data ,date_format(a.post_time,'%Y-%m-%d %h:%m') from post_data a, user_data b where a.user_id = b.user_id and post_id = '" + request.data.get("post_id") + "';"
+        result1 = cursor.execute(sql_statement1)     
+        data1 = cursor.fetchall()
+
+        sql_statement2 = "select a.comment_id, a.comment_cont, b.user_name, date_format(a.comment_time,'%Y-%m-%d %h:%m') 작성시간, a.post_id, a.user_id from comment_data a, user_data b where a.user_id = b.user_id and post_id = '" + request.data.get("post_id") +"' order by 작성시간;"
+        result2 = cursor.execute(sql_statement2)     
+        data2 = cursor.fetchall()
+
+
+        return JsonResponse({'post_data':data1,'comment_data':data2})
+############################################ 이미지 관련(테스트중)
+
+
+
+class upload_photo(APIView):
+    def post(self,request):
+        photo_data = Post()
+        photo_data.user_id = 'aaaa'
+        photo_data.photo = request.FILES['files']
+        photo_data.save()
+
+        images = list(Post.objects.all())
+
+        return JsonResponse({'chk_message':images})

@@ -1,6 +1,4 @@
 from django.urls import path
-from django.conf.urls.static import static
-from django.conf import settings
 
 from . import views
 
@@ -18,12 +16,18 @@ urlpatterns = [
     path('email_ch/', views.email_change.as_view() ,name='mail_change'),
     path('comment_ch/', views.comment_change.as_view() ,name='comment_change'),
     
-    #팀 관련
+    #팀 관련(TU는 팀 유저(팀원)을 의미)
     path('make_team/', views.make_a_team.as_view() ,name='make_team'),
     path('TU_list/', views.team_list1.as_view() ,name='summary_team_list'),
-    path('detail_team_list/', views.team_list2.as_view() ,name='detail_team_list'),
-    path('detail_team_list2/', views.team_list3.as_view() ,name='detail_team_list'),
-    path('team_authority/', views.team_authority.as_view() ,name='detail_team_list'),
-]
+    path('detail_team_list/', views.team_list2.as_view() ,name='detail_team_list1'),
+    path('detail_team_list2/', views.team_list3.as_view() ,name='detail_team_list1'),
+    path('team_authority/', views.team_authority.as_view() ,name='team_authority'),
+    path('delete_TU/', views.delete_team_user.as_view() ,name='delete_TU'),
+    path('ch_comment/', views.change_team_comment.as_view() ,name='ch_comment'),
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    #게시글 테스트 관련
+    path('post_test/', views.post_list.as_view() ,name='test2'),
+
+    #이미지 테스트 관련
+    path('image_test/', views.upload_photo.as_view() ,name='test1'),
+]
