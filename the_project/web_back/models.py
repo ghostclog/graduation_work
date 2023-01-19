@@ -15,6 +15,19 @@ class CommentData(models.Model):
 
 
 
+class ChatData(models.Model):
+    chat_id = models.AutoField(primary_key=True)
+    user_chat = models.CharField(max_length=100)
+    team_name = models.ForeignKey('TeamData', models.DO_NOTHING, db_column='team_name')
+    user_name = models.CharField(max_length=50)
+    chat_time = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'chat_data'
+
+
+
 class PostData(models.Model):
     post_id = models.IntegerField(primary_key=True)
     category = models.CharField(max_length=45)
@@ -31,6 +44,15 @@ class PostData(models.Model):
         db_table = 'post_data'
 
 
+class TeamApplyLog(models.Model):
+    apply_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey('UserData', models.DO_NOTHING)
+    team_name = models.ForeignKey('TeamData', models.DO_NOTHING, db_column='team_name')
+
+    class Meta:
+        managed = False
+        db_table = 'team_apply_log'
+
 
 class TeamData(models.Model):
     team_name = models.CharField(primary_key=True, max_length=250)
@@ -44,17 +66,15 @@ class TeamData(models.Model):
         db_table = 'team_data'
 
 
-
 class TeamUserData(models.Model):
     pr_key = models.AutoField(primary_key=True)
-    tema_name = models.ForeignKey(TeamData, models.DO_NOTHING, db_column='tema_name')
+    team_name = models.ForeignKey(TeamData, models.DO_NOTHING, db_column='team_name')
     user = models.ForeignKey('UserData', models.DO_NOTHING)
     is_admin = models.CharField(max_length=1)
 
     class Meta:
         managed = False
         db_table = 'team_user_data'
-
 
 
 class UserData(models.Model):
@@ -70,8 +90,12 @@ class UserData(models.Model):
         managed = False
         db_table = 'user_data'
 
+        
 
+class Profile(models.Model):
+    user = models.OneToOneField('UserData', models.DO_NOTHING, primary_key=True)
+    profile_data = models.TextField(blank=True, null=True)
 
-class Post(models.Model):
-	user_id = models.CharField(primary_key=True, max_length=50)
-	photo = models.ImageField(upload_to='media/profile',default='default.jpg')
+    class Meta:
+        managed = False
+        db_table = 'profile'
