@@ -38,6 +38,7 @@ class PostData(models.Model):
     num_of_open = models.IntegerField()
     num_of_recommend = models.IntegerField()
     post_title = models.CharField(max_length=1024, blank=True, null=True)
+    post_type = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -77,6 +78,20 @@ class TeamUserData(models.Model):
         db_table = 'team_user_data'
 
 
+class TeamPost(models.Model):
+    post_id = models.AutoField(primary_key=True)
+    post_title = models.CharField(max_length=50)
+    post_contents = models.TextField()
+    post_time = models.DateTimeField()
+    team_name = models.ForeignKey(TeamData, models.DO_NOTHING, db_column='team_name')
+    user = models.ForeignKey('UserData', models.DO_NOTHING)
+    post_type = models.CharField(max_length=45, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'team_post'
+
+
 class UserData(models.Model):
     user_id = models.CharField(primary_key=True, max_length=50)
     user_pass = models.CharField(max_length=128)
@@ -90,12 +105,18 @@ class UserData(models.Model):
         managed = False
         db_table = 'user_data'
 
-        
 
-class Profile(models.Model):
-    user = models.OneToOneField('UserData', models.DO_NOTHING, primary_key=True)
-    profile_data = models.TextField(blank=True, null=True)
+
+class profile_photo(models.Model):
+    user_photo = models.ImageField(upload_to="media/profile")
+    user_id = models.CharField(max_length=50)
+
+
+
+class WebBackProfilePhoto(models.Model):
+    user_photo = models.CharField(max_length=100)
+    user = models.OneToOneField(UserData, models.DO_NOTHING, primary_key=True)
 
     class Meta:
         managed = False
-        db_table = 'profile'
+        db_table = 'web_back_profile_photo'
