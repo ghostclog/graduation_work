@@ -1,9 +1,10 @@
 from django.shortcuts import render,HttpResponse
-from django.http import JsonResponse,Http404
+from django.http import JsonResponse,Http404,FileResponse
 from django.contrib.auth import authenticate
 from django.db import connection
 from django.db.models import Max,Count
 from PIL import Image
+from django.core.files.storage import FileSystemStorage
 from rest_framework.views import APIView
 from .models import *
 
@@ -69,6 +70,8 @@ class user_login(APIView):      #로그인
 
 class name_change(APIView):      #닉네임 변경
     def post(self,request):
+        if len(request.data.get("nickname")) >= 50:
+            return JsonResponse({'chk_message':'닉네임이 너무 깁니다!'},status=200)
         chk = UserData.objects.all()        #유저 테이블의 모든 객체를 가져옴
         if chk.filter(user_name = request.data.get("nickname")).exists():       #닉네임 중복체크
             return JsonResponse({'chk_message':'닉네임 중복입니다.'},status=200)
@@ -240,10 +243,11 @@ class mypage_team_member_list(APIView):             #팀원에 대한 정보(이
 
         return JsonResponse({'user_data':data1,'photo_data':photo_64})
 
-######여기 아래 두 개는 프로필 사진 관련 코드 추가해줘야함.
+
 class team_list2(APIView):              #팀명 / 타임스탬프 / 팀원에 대한 정보를 보여주는 상세한 팀 리스트
     def post(self,request):
         result_list = []
+        big_photo_list = []
         cursor = connection.cursor()
 
         sql_statement1 = "select a.team_name, DATE_FORMAT(a.team_make_time,'%Y/%m/%d'), team_category from team_data a, team_user_data b where a.team_name = b.team_name and b.user_id = '" + request.data.get("id") + "';"
@@ -251,39 +255,115 @@ class team_list2(APIView):              #팀명 / 타임스탬프 / 팀원에 �
         result = cursor.execute(sql_statement1)      #코드 실행
         team_data = cursor.fetchall()                #실행 결과 입력
         for i in team_data:
-            small_list = []
+            small_user_list = []
+            small_photo_list = []
             team_user_sql = "select user_name, user_photo from team_user_data,user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_user_data.user_id = user_data.user_id and team_name = '" + i[0] + "';"
             #해당 팀에 속한 팀원을 보여줌
             result = cursor.execute(team_user_sql)      #코드 실행
             team_user_data = cursor.fetchall()          #실행 결과 입력
+            small_user_list.append(i)                #팀명과 타임스탬프
+            small_user_list.append(team_user_data)   #해당 팀의 팀원
+            result_list.append(small_user_list)      #팀명 및 타임스탬프, 팀원 데이터를 뭉친걸 결과 리스트에 담기
 
-            small_list.append(i)
-            small_list.append(team_user_data)
-            result_list.append(small_list)
+            for i in team_user_data:                #한 팀에 대한 사진들을
+                if i[1] is None:
+                    photo_url = "../the_project/media/media/profile/default.jpg"
+                else:
+                    photo_url = "../the_project/media/media/profile/" + i[1]
 
-        return JsonResponse({'user_data':result_list})
+                with open(photo_url,'rb') as img:
+                    team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+                small_photo_list.append(team_photo_base64)  #작은 사진 리스트에 담음
+            big_photo_list.append(small_photo_list)         #그리고, 다음팀으로 넘어가기 전 해당 팀에 대한 사진 값을 큰 사진 리스트로 옮김
+
+        return JsonResponse({'user_data':result_list,'photo_data':big_photo_list})
         #팀에 대한 정보(팀명, 타임스탬프)와 팀원에 대한 정보를 함께 전달해주기 위해 for문을 사용함.
+
+        
 
 
 class team_list3(APIView):              #타임스탬프 / 팀소개 / 팀카테고리 / 팀원에 대한 정보를 보여주는 상세한 팀 리스트
     def post(self,request):
         data_list = []
         cursor = connection.cursor()
+        #팀 소개
         sql_statement1 = "select introduction,DATE_FORMAT(team_make_time,'%Y/%m/%d'),team_category from team_data where team_name = '" + request.data.get("teamname") + "';"
         result = cursor.execute(sql_statement1)     
         team_data = cursor.fetchall()       
         data_list.append(team_data)
-
-        sql_statement3 = "select a.user_name, a.user_email, a.user_comment, b.is_admin from user_data a, team_user_data b where a.user_id = b.user_id and team_name = '" + request.data.get("teamname") + "';"
+        #팀원 데이터
+        sql_statement3 = "select user_name, user_email, user_comment, is_admin, user_photo from team_user_data,user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_user_data.user_id = user_data.user_id and team_name = '" + request.data.get("teamname") + "' order by is_admin desc;"
         result = cursor.execute(sql_statement3)     
         user_data = cursor.fetchall()
-
-        sql_statement = "select a.user_name, a.user_email, a.user_comment from user_data a, team_apply_log b where a.user_id = b.user_id and b.team_name = '" + request.data.get("teamname") + "';"
+        #팀원들 프로필 사진
+        team_photo_64 = []
+        for i in user_data:
+            if i[4] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[4]
+            with open(photo_url,'rb') as img:
+                team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            team_photo_64.append(team_photo_base64)
+        #팀 신청 데이터
+        sql_statement = "select user_name, user_email, user_comment, user_photo from team_apply_log, user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_apply_log.user_id = user_data.user_id  and team_name = '" + request.data.get("teamname") + "';"
         result = cursor.execute(sql_statement)     
         result_data = cursor.fetchall()
+        #신청자들 프로필 사진
+        apply_photo_64 = []
+        for i in result_data:
+            if i[3] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[3]
+            with open(photo_url,'rb') as img:
+                apply_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            apply_photo_64.append(apply_photo_base64)
 
-        return JsonResponse({'team_data':data_list,'user_datas':user_data,'apply_list':result_data})
-        
+        return JsonResponse({'team_data':data_list,'user_datas':user_data,'apply_list':result_data,'team_photo':team_photo_64,'apply_photo':apply_photo_64})
+
+
+class team_page(APIView):              #타임스탬프 / 팀소개 / 팀카테고리 / 팀원에 대한 정보를 보여주는 상세한 팀 리스트
+    def get(self,request,teamname, format=None):
+        data_list = []
+        cursor = connection.cursor()
+        #팀 소개
+        sql_statement1 = "select introduction,DATE_FORMAT(team_make_time,'%Y/%m/%d'),team_category from team_data where team_name = '" + teamname + "';"
+        result = cursor.execute(sql_statement1)     
+        team_data = cursor.fetchall()       
+        data_list.append(team_data)
+        #팀원 데이터
+        sql_statement3 = "select user_name, user_email, user_comment, is_admin, user_photo from team_user_data,user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_user_data.user_id = user_data.user_id and team_name = '" + teamname + "' order by is_admin desc;"
+        result = cursor.execute(sql_statement3)     
+        user_data = cursor.fetchall()
+        #팀원들 프로필 사진
+        team_photo_64 = []
+        for i in user_data:
+            if i[4] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[4]
+            with open(photo_url,'rb') as img:
+                team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            team_photo_64.append(team_photo_base64)
+        #팀 신청 데이터
+        sql_statement = "select user_name, user_email, user_comment, user_photo from team_apply_log, user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_apply_log.user_id = user_data.user_id  and team_name = '" + teamname + "';"
+        result = cursor.execute(sql_statement)     
+        result_data = cursor.fetchall()
+        #신청자들 프로필 사진
+        apply_photo_64 = []
+        for i in result_data:
+            if i[3] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[3]
+            with open(photo_url,'rb') as img:
+                apply_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            apply_photo_64.append(apply_photo_base64)
+
+        return JsonResponse({'team_data':data_list,'user_datas':user_data,'apply_list':result_data,'team_photo':team_photo_64,'apply_photo':apply_photo_64})
+
+
 
 class team_authority(APIView):      #팀 정보 페이지 방문 시, 방문자의 권한에 대한 코드
     def post(self,request):
@@ -306,11 +386,21 @@ class delete_team_user(APIView):        #팀원 추방
         user.delete()
         #팀원 추방 후 화면 갱신을 해주기 위해 갱신된 데이터 전송하는 코드
         cursor = connection.cursor()
-        sql_statement3 = "select a.user_name, a.user_email, a.user_comment, b.is_admin from user_data a, team_user_data b where a.user_id = b.user_id and team_name = '" + request.data.get("teamname") + "';"
+        sql_statement3 = "select user_name, user_email, user_comment, is_admin, user_photo from team_user_data,user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_user_data.user_id = user_data.user_id and team_name = '" + request.data.get("teamname") + "' order by is_admin desc;"
         result = cursor.execute(sql_statement3)     
         user_data = cursor.fetchall()
+        #갱신된 팀원들 프로필 사진
+        team_photo_64 = []
+        for i in user_data:
+            if i[4] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[4]
+            with open(photo_url,'rb') as img:
+                team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            team_photo_64.append(team_photo_base64)
 
-        return JsonResponse({'chk_message':'해당 팀원이 추방되었습니다!','datas':user_data})
+        return JsonResponse({'chk_message':'해당 팀원이 추방되었습니다!','datas':user_data,'team_photo':team_photo_64})
 
 
 class change_team_comment(APIView):     #팀 코맨트 변경
@@ -366,11 +456,21 @@ class allow_apply(APIView):
         sql_statement = "select a.user_name, a.user_email, a.user_comment from user_data a, team_apply_log b where a.user_id = b.user_id and b.team_name = '" + request.data.get("teamname") + "';"
         result = cursor.execute(sql_statement)     
         result_data = cursor.fetchall()
-        #팀원 목록 최신화
-        sql_statement3 = "select a.user_name, a.user_email, a.user_comment, b.is_admin from user_data a, team_user_data b where a.user_id = b.user_id and team_name = '" + request.data.get("teamname") + "';"
+        #갱신된 팀원 데이터
+        sql_statement3 = "select user_name, user_email, user_comment, is_admin, user_photo from team_user_data,user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_user_data.user_id = user_data.user_id and team_name = '" + request.data.get("teamname") + "' order by is_admin desc;"
         result = cursor.execute(sql_statement3)     
-        user_datas = cursor.fetchall()
-        return JsonResponse({'message':'새로운 팀원이 들어왔습니다.','apply_list':result_data,'user_datas':user_datas})
+        user_data = cursor.fetchall()
+        #갱신된 팀원들 프로필 사진
+        team_photo_64 = []
+        for i in user_data:
+            if i[4] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[4]
+            with open(photo_url,'rb') as img:
+                team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            team_photo_64.append(team_photo_base64)
+        return JsonResponse({'message':'새로운 팀원이 들어왔습니다.','apply_list':result_data,'user_datas':user_data,'team_photo':team_photo_64})
 
 
 class reject_apply(APIView):        #신청 거절 코드
@@ -381,24 +481,48 @@ class reject_apply(APIView):        #신청 거절 코드
         apply_data.delete()
         #거절 이후 신청 목록 최신화
         cursor = connection.cursor()    
-        sql_statement = "select a.user_name, a.user_email, a.user_comment from user_data a, team_apply_log b where a.user_id = b.user_id and b.team_name = '" + request.data.get("teamname") + "';"
+        sql_statement = "select user_name, user_email, user_comment, user_photo from team_apply_log, user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_apply_log.user_id = user_data.user_id  and team_name = '" + request.data.get("teamname") + "';"
         result = cursor.execute(sql_statement)     
         result_data = cursor.fetchall()
-        return JsonResponse({'message':'신청을 거절했습니다!','apply_list': result_data})
+        #신청자들 프로필 사진
+        apply_photo_64 = []
+        for i in result_data:
+            if i[3] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[3]
+            with open(photo_url,'rb') as img:
+                apply_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            apply_photo_64.append(apply_photo_base64)
+
+        return JsonResponse({'message':'신청을 거절했습니다!','apply_list': result_data,'apply_photo':apply_photo_64})
 
 
 class chat_log(APIView):            #채팅 로그(유니티에서 쏴주는 채팅 로그 데이터를 불러오는 코드)  
     def post(self,request):
+        #채팅 로그들
         cursor = connection.cursor()
-        sql_statement = "select chat_id, user_chat, user_name, date_format(chat_time,'%Y-%m-%d %H:%i') from chat_data where team_name = '" + request.data.get("teamname") + "' order by chat_id asc;"
+        sql_statement = "select a.chat_id, a.user_chat, a.user_name, date_format(a.chat_time,'%Y-%m-%d %H:%i') 채팅시간, user_photo from chat_data a, user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where a.user_name = user_data.user_name and a.team_name = '" + request.data.get("teamname") + "' order by chat_id asc;"
         result = cursor.execute(sql_statement)     
         result_data = cursor.fetchall()
-        return JsonResponse({'chat_list': result_data})
+        #채팅 로그의 프로필 사진
+        profiles_photo_64 = []
+        for i in result_data:
+            if i[4] is None:
+                photo_url = "../the_project/media/media/profile/default.jpg"
+            else:
+                photo_url = "../the_project/media/media/profile/" + i[4]
+            with open(photo_url,'rb') as img:
+                apply_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+            profiles_photo_64.append(apply_photo_base64)
+
+        return JsonResponse({'chat_list': result_data,'photo_data':profiles_photo_64})
 
 
 class search_team(APIView): #검색 기능
     def post(self,request):
         result_list = []
+        big_photo_list = []
         cursor = connection.cursor()
         if request.data.get("category") == 'All' and request.data.get("teamname") == "":    #모든 카테고리 + 제목 미입력시 > 모든 게시글 보여주기
             sql_statement = "select team_name, DATE_FORMAT(team_make_time,'%Y/%m/%d'), team_category from team_data order by team_name;"
@@ -412,16 +536,25 @@ class search_team(APIView): #검색 기능
         result = cursor.execute(sql_statement)      #코드 실행
         team_data = cursor.fetchall()               #실행 결과 입력
         for i in team_data:
-            small_list = []
-            team_user_sql = "select user_name from team_user_data a, user_data b where a.user_id = b.user_id and a.team_name = '" + i[0] + "';"
+            small_user_list = []
+            small_photo_list = []
+            team_user_sql = "select user_name, user_photo from team_user_data,user_data left join web_back_profile_photo on user_data.user_id = web_back_profile_photo.user_id where team_user_data.user_id = user_data.user_id and team_name = '" + i[0] + "';"
             #해당 팀에 속한 팀원을 보여줌
             result = cursor.execute(team_user_sql)      #코드 실행
             team_user_data = cursor.fetchall()          #실행 결과 입력
-            #결과 모아주기
-            small_list.append(i)
-            small_list.append(team_user_data)
-            result_list.append(small_list)
-        return JsonResponse({'team_data': result_list})
+            small_user_list.append(i)                #팀명과 타임스탬프
+            small_user_list.append(team_user_data)   #해당 팀의 팀원
+            result_list.append(small_user_list)      #팀명 및 타임스탬프, 팀원 데이터를 뭉친걸 결과 리스트에 담기
+            for i in team_user_data:                #한 팀에 대한 사진들을
+                if i[1] is None:
+                    photo_url = "../the_project/media/media/profile/default.jpg"
+                else:
+                    photo_url = "../the_project/media/media/profile/" + i[1]
+                with open(photo_url,'rb') as img:
+                    team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
+                small_photo_list.append(team_photo_base64)  #작은 사진 리스트에 담음
+            big_photo_list.append(small_photo_list)         #그리고, 다음팀으로 넘어가기 전 해당 팀에 대한 사진 값을 큰 사진 리스트로 옮김
+        return JsonResponse({'team_data':result_list,'photo_data':big_photo_list})
 
 
 ############################################################### 팀게시판 관련
@@ -442,7 +575,18 @@ class team_post(APIView):       #팀 게시글 코드(일반 게시판과 구조
         sql_statement = "select post_title, post_contents, date_format(post_time,'%Y-%m-%d %H:%i'), user_name, post_type from team_post a, user_data b where a.user_id = b.user_id and post_id = '" + request.data.get("id") + "';"
         result = cursor.execute(sql_statement)      #코드 실행
         post_data = cursor.fetchall()               #실행 결과 입력
-        return JsonResponse({'post_data': post_data})
+        if post_data[0][4] == 'file_save':
+            sql_statement2 = "select files from web_back_team_file where the_post_id = '" + request.data.get("id") + "';"
+            result = cursor.execute(sql_statement2)      #코드 실행
+            file_url_result = cursor.fetchall()          #실행 결과 입력
+
+            file_url = str(file_url_result[0])      #url값을 str바꿔주고
+            not_processed_file_name = file_url.split('/')        #바꾼 str /를 기준으로 나눠주고
+            not_processed_file_name = not_processed_file_name[-1]
+            file_name = not_processed_file_name[:-3]
+            return JsonResponse({'post_data': post_data,'file_name':file_name})
+        else:
+            return JsonResponse({'post_data': post_data})
 
 
 class write_team_post(APIView):         #팀 게시글 작성 코드(일반 게시판과 구조가 거의 동일)
@@ -453,8 +597,9 @@ class write_team_post(APIView):         #팀 게시글 작성 코드(일반 게�
         post_data.post_time = datetime.datetime.now()
         post_data.user = UserData.objects.get(user_id=request.data.get("id"))
         post_data.team_name = TeamData.objects.get(team_name = request.data.get("teamname"))
-        post_data.post_type = 'nomal'
+        post_data.post_type = request.data.get("post_type")
         post_data.save()
+
         return JsonResponse({'message': '게시글 작성이 완료되었습니다!'})
 
 
@@ -481,6 +626,7 @@ class modify_team_post_button(APIView):     #팀 게시글 수정하기 버튼( 
         sql_statement = "select post_title,post_contents from team_post where post_id = '" + request.data.get("post_id") + "';"
         result = cursor.execute(sql_statement)     
         data = cursor.fetchall()
+        
         return JsonResponse({'post_data':data})
 
 
@@ -490,8 +636,15 @@ class modify_team_post(APIView):            #팀 게시글 수정 완료 버튼(
         post_data.post_contents = request.data.get("text")
         post_data.post_title = request.data.get("title")
         post_data.save()
+
         return JsonResponse({'chk_message':"게시글이 수정되었습니다."})
 
+
+class download_file(APIView):
+    queryset = team_file.objects.all()
+    def post(self,request):
+        cursor = connection.cursor()
+        sql_statement = ""
 
 ############################################ 게시글 관련
 
@@ -692,7 +845,7 @@ class comment_change(APIView):              #댓글 수정
         return JsonResponse({'message':"댓글이 수정되었습니다.",'comment_data':data2})
 
 
-############################################ 프로필 사진 관련(진행중)
+############################################ 파일 업로드 관련(진행중)
 
 
 class set_profile(APIView):     #프로필 사진 변경
@@ -711,3 +864,39 @@ class set_profile(APIView):     #프로필 사진 변경
             return JsonResponse({'message':'프로필 사진 변경 완료!','post_data':photo_base64})
         except:
             return JsonResponse({'message':'프로필 사진 변경 완료!','post_data':photo_base64})
+
+
+class team_post_file(APIView):     #파일 저장
+    def post(self,request):
+        #파일 저장을 위해 방금 작성되어 저장된 게시글의 아이디값 가져오기.
+        max_post_id = TeamPost.objects.all().aggregate(Max('post_id'))
+        #여기부터 파일 저장 부분
+        post_file = request.FILES.get('files')
+        file_data = team_file()
+        file_data.files = post_file
+        file_data.the_post_id = max_post_id['post_id__max']
+        file_data.save()
+
+        return JsonResponse({'message': '파일 업로드 성공'})
+
+
+class download_file(APIView):     #파일 다운로드
+    queryset = WebBackTeamFile.objects.all()
+    def post(self,request):
+        cursor = connection.cursor()
+        sql_statement = "select files from web_back_team_file where the_post_id = '" + request.data.get("post_id") + "';"
+        result = cursor.execute(sql_statement)
+        data = cursor.fetchall()
+        file_url = '../the_project/media/' + data[0][0]
+
+        response = FileResponse(open(file_url, 'rb'))
+        response['Content-Disposition'] = 'attachment;filename=' + data[0][0]
+        return response
+
+
+class unity_file(APIView):
+    def get(self, request):
+        file_url = '../the_project/media/unity/4.zip'
+        response = FileResponse(open(file_url, 'rb'))
+        response['Content-Disposition'] = 'attachment;filename=4.zip'
+        return response

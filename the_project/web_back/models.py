@@ -19,7 +19,7 @@ class ChatData(models.Model):
     chat_id = models.AutoField(primary_key=True)
     user_chat = models.CharField(max_length=100)
     team_name = models.ForeignKey('TeamData', models.DO_NOTHING, db_column='team_name')
-    user_name = models.CharField(max_length=50)
+    user_name = models.ForeignKey('UserData', models.DO_NOTHING, db_column='user_name', to_field='user_name')
     chat_time = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -95,7 +95,7 @@ class TeamPost(models.Model):
 class UserData(models.Model):
     user_id = models.CharField(primary_key=True, max_length=50)
     user_pass = models.CharField(max_length=128)
-    user_name = models.CharField(max_length=50)
+    user_name = models.CharField(unique=True, max_length=50)
     user_admin = models.CharField(max_length=1, blank=True, null=True)
     login_state = models.CharField(max_length=1, blank=True, null=True)
     user_email = models.CharField(max_length=512)
@@ -120,3 +120,19 @@ class WebBackProfilePhoto(models.Model):
     class Meta:
         managed = False
         db_table = 'web_back_profile_photo'
+
+
+
+class team_file(models.Model):
+    the_post_id = models.CharField(max_length=100)
+    files = models.FileField(upload_to="TestFolder")
+
+
+
+class WebBackTeamFile(models.Model):
+    the_post_id = models.OneToOneField(TeamPost, models.DO_NOTHING, primary_key=True)
+    files = models.CharField(max_length=100)
+
+    class Meta:
+        managed = False
+        db_table = 'web_back_team_file'

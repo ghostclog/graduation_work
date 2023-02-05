@@ -23,6 +23,7 @@ urlpatterns = [
     path('mypage_TUlist/', views.mypage_team_member_list.as_view() ,name='summary_team_list'),  #마이 페이지 팀 요약
     path('detail_team_list/', views.team_list2.as_view() ,name='detail_team_list1'),
     path('detail_team_list2/', views.team_list3.as_view() ,name='detail_team_list2'),
+    path('team_page/<str:teamname>/', views.team_page.as_view() ,name='team_page'),
     path('team_authority/', views.team_authority.as_view() ,name='team_authority'),         #팀 권한
     path('delete_TU/', views.delete_team_user.as_view() ,name='delete_TU'),             #팀원 강퇴
     path('ch_comment/', views.change_team_comment.as_view() ,name='ch_comment'),        #팀 코맨트 변경
@@ -38,6 +39,7 @@ urlpatterns = [
     path('team_post/', views.team_post.as_view() ,name='team_post'),            #팀 게시글 보기
     path('search_team_post/', views.search_team_post.as_view() ,name='search_team_post'),       #팀 게시글 검색
     path('write_team_post/', views.write_team_post.as_view() ,name='write_team_post'),      #팀 게시글 작성
+    path('write_team_post_with_file/', views.team_post_file.as_view() ,name='file_set'),    #파일을 포함한 팀게시글 작성
     path('delete_team_post/', views.delete_team_post.as_view() ,name='delete_team_post'),   #팀 게시글 삭제
     path('modify_team_post_button/', views.modify_team_post_button.as_view() ,name='modify_team_post_button'),      #팀 게시글 수정하기 버튼
     path('modify_team_post/', views.modify_team_post.as_view() ,name='modify_team_post'),       #팀 게시글 수정 완료 버튼
@@ -62,6 +64,8 @@ urlpatterns = [
     path('post_info_share/', views.info_share.as_view() ,name='post_info_share'),       #일반 게시글 공유
     path('team_info_share/', views.team_share.as_view() ,name='team_info_share'),       #팀 게시글 공유
 
-    #프로필 사진 설정 관련
-    path('image_test/', views.set_profile.as_view() ,name='profile_set'),           #프로필 사진 수정
+    #파일 관련
+    path('image_test/', views.set_profile.as_view() ,name='profile_set'),               #프로필 사진 수정
+    path('download_file/', views.download_file.as_view() ,name='profile_set'),
+    path('main_file/', views.unity_file.as_view() ,name='profile_set'),
 ]
