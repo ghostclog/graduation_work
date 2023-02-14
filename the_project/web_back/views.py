@@ -2,7 +2,7 @@ from django.shortcuts import render,HttpResponse
 from django.http import JsonResponse,Http404,FileResponse
 from django.contrib.auth import authenticate
 from django.db import connection
-from django.db.models import Max,Count
+from django.db.models import Max,Count,Sum
 from PIL import Image
 from django.core.files.storage import FileSystemStorage
 from rest_framework.views import APIView
@@ -399,6 +399,20 @@ class delete_team_user(APIView):        #팀원 추방
             with open(photo_url,'rb') as img:
                 team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
             team_photo_64.append(team_photo_base64)
+        #알림 보내기
+        comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
+        user_data_for_message = UserData.objects.get(user_name=request.data.get("nickname"))  #해당 게시글에 대한 정보 불러오기
+        id_string1 = str(user_data_for_message.user_id)                                    #게시글을 작성한 유저의 아이디 가져오기
+        id_string2 = id_string1.replace('UserData object (', '')            #가져온 값 처리1
+        user_id = id_string2.replace(')','')                                #가져온 값 처리2(이유는 저장시 값이 UserData object('데이터')로 저장되기 때문)
+        comment_message.receiver_id = user_id                               #쪽지를 받는 사람 아이디 저장
+        comment_message.title = "추방되었습니다."                     #이후 데이터 저장
+        comment_message.contents = "'" + request.data.get("teamname") + "'팀에서 추방당하셨습니다."  #알림 내용
+        comment_message.category = "fire_team"                                    #알림 종류
+        comment_message.receive_time = datetime.datetime.now()                      #알림 시각
+        comment_message.about_chk = '1'
+        comment_message.save()
+
 
         return JsonResponse({'chk_message':'해당 팀원이 추방되었습니다!','datas':user_data,'team_photo':team_photo_64})
 
@@ -426,6 +440,20 @@ class team_apply(APIView):          #팀 신청 하는 코드
         apply_data.user = UserData.objects.get(user_id=request.data.get("id"))
         apply_data.team_name = TeamData.objects.get(team_name = request.data.get("teamname"))
         apply_data.save()
+        #알림 보내기
+        comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
+        team_data = TeamData.objects.get(pk = request.data.get("teamname"))  #해당 게시글에 대한 정보 불러오기
+        id_string1 = str(team_data.user)                                    #게시글을 작성한 유저의 아이디 가져오기
+        id_string2 = id_string1.replace('UserData object (', '')            #가져온 값 처리1
+        user_id = id_string2.replace(')','')                                #가져온 값 처리2(이유는 저장시 값이 UserData object('데이터')로 저장되기 때문)
+        comment_message.receiver_id = user_id                               #쪽지를 받는 사람 아이디 저장
+        comment_message.title = "팀 신청이 도착했습니다."                     #이후 데이터 저장
+        comment_message.contents = "'" + request.data.get("teamname") + "'팀에 대한 신청이 도착했습니다."  #알림 내용
+        comment_message.category = "team_apply"                                 #알림 종류
+        comment_message.receive_time = datetime.datetime.now()                  #알림 시각
+        comment_message.about_chk = '1'
+        comment_message.save()
+
         return JsonResponse({'message':'팀 신청이 완료되었습니다.'})
 
 
@@ -470,8 +498,20 @@ class allow_apply(APIView):
             with open(photo_url,'rb') as img:
                 team_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
             team_photo_64.append(team_photo_base64)
+        #알림 보내기
+        comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
+        user_data_for_message = UserData.objects.get(user_name=request.data.get("nickname"))  #해당 게시글에 대한 정보 불러오기
+        id_string1 = str(user_data_for_message.user_id)                                    #게시글을 작성한 유저의 아이디 가져오기
+        id_string2 = id_string1.replace('UserData object (', '')            #가져온 값 처리1
+        user_id = id_string2.replace(')','')                                #가져온 값 처리2(이유는 저장시 값이 UserData object('데이터')로 저장되기 때문)
+        comment_message.receiver_id = user_id                               #쪽지를 받는 사람 아이디 저장
+        comment_message.title = "새로운 팀에 가입하였습니다."                     #이후 데이터 저장
+        comment_message.contents = "'" + request.data.get("teamname") + "'팀에 대한 신청이 수락되었습니다."  #알림 내용
+        comment_message.category = "apply_allow"                                    #알림 종류
+        comment_message.receive_time = datetime.datetime.now()                      #알림 시각
+        comment_message.about_chk = '1'
+        comment_message.save()
         return JsonResponse({'message':'새로운 팀원이 들어왔습니다.','apply_list':result_data,'user_datas':user_data,'team_photo':team_photo_64})
-
 
 class reject_apply(APIView):        #신청 거절 코드
     def post(self,request):
@@ -494,6 +534,20 @@ class reject_apply(APIView):        #신청 거절 코드
             with open(photo_url,'rb') as img:
                 apply_photo_base64 = base64.b64encode(img.read()).decode('utf-8')
             apply_photo_64.append(apply_photo_base64)
+        #알림 보내기
+        comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
+        user_data_for_message = UserData.objects.get(user_name=request.data.get("nickname"))  #해당 게시글에 대한 정보 불러오기
+        id_string1 = str(user_data_for_message.user_id)                                    #게시글을 작성한 유저의 아이디 가져오기
+        id_string2 = id_string1.replace('UserData object (', '')            #가져온 값 처리1
+        user_id = id_string2.replace(')','')                                #가져온 값 처리2(이유는 저장시 값이 UserData object('데이터')로 저장되기 때문)
+        comment_message.receiver_id = user_id                               #쪽지를 받는 사람 아이디 저장
+        comment_message.title = "가입 신청이 거절되었습니다."                     #이후 데이터 저장
+        comment_message.contents = "'" + request.data.get("teamname") + "'팀에 대한 가입 신청이 거절되었습니다."  #알림 내용
+        comment_message.category = "apply_reject"                                    #알림 종류
+        comment_message.receive_time = datetime.datetime.now()                      #알림 시각
+        comment_message.about_chk = '1'
+        comment_message.save()
+
 
         return JsonResponse({'message':'신청을 거절했습니다!','apply_list': result_data,'apply_photo':apply_photo_64})
 
@@ -555,6 +609,40 @@ class search_team(APIView): #검색 기능
                 small_photo_list.append(team_photo_base64)  #작은 사진 리스트에 담음
             big_photo_list.append(small_photo_list)         #그리고, 다음팀으로 넘어가기 전 해당 팀에 대한 사진 값을 큰 사진 리스트로 옮김
         return JsonResponse({'team_data':result_list,'photo_data':big_photo_list})
+
+
+class delete_team(APIView):
+    def post(self,request):
+
+        #from web_back.models import * 
+        user_data = TeamUserData.objects.filter(team_name =  request.data.get("teamname"), is_admin = 0).values('user')
+        for i in user_data:
+            comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
+            user_data_for_message = UserData.objects.get(user_id = i['user'])  #해당 게시글에 대한 정보 불러오기
+            id_string1 = str(user_data_for_message.user_id)                                    #게시글을 작성한 유저의 아이디 가져오기
+            id_string2 = id_string1.replace('UserData object (', '')            #가져온 값 처리1
+            user_id = id_string2.replace(')','')                                #가져온 값 처리2(이유는 저장시 값이 UserData object('데이터')로 저장되기 때문)
+            comment_message.receiver_id = user_id                               #쪽지를 받는 사람 아이디 저장
+            comment_message.title = "팀이 삭제되었습니다."                     #이후 데이터 저장
+            comment_message.contents = "'" + request.data.get("teamname") + "'팀이 삭제됨에 따라 팀에서 추방되었습니다."  #알림 내용
+            comment_message.category = "fire_team"                                    #알림 종류
+            comment_message.receive_time = datetime.datetime.now()                      #알림 시각
+            comment_message.about_chk = '1'
+            comment_message.save()
+
+        team_user_data = TeamUserData.objects.filter(team_name = request.data.get("teamname")) #팀원 삭제
+        team_user_data.delete()
+        team_post_data = TeamPost.objects.filter(team_name = request.data.get("teamname")) #팀 게시글 삭제
+        team_post_data.delete()
+        team_apply_data = TeamApplyLog.objects.filter(team_name = request.data.get("teamname"))    #팀 신청  로그 삭제
+        team_apply_data.delete()
+        team_chat_data = ChatData.objects.filter(team_name = request.data.get("teamname"))     #채팅데이터 삭제
+        team_chat_data.delete()
+        team_data = TeamData.objects.filter(team_name = request.data.get("teamname"))      #팀삭제
+        team_data.delete()
+
+        return JsonResponse({'return_data':'팀이 삭제되었습니다!'})
+
 
 
 ############################################################### 팀게시판 관련
@@ -653,7 +741,10 @@ class post_list(APIView):       #게시판 들어갔을때 해당 게시판에 �
     def post(self,request):
         list = []               #게시글 리스트들
         cursor = connection.cursor()
-        sql_statement1 = "select a.post_id, a.post_title, b.user_name, a.num_of_open, a.num_of_recommend, date_format(a.post_time,'%Y-%m-%d %H:%i') 시간 from post_data a, user_data b where a.user_id = b.user_id and category = '" + request.data.get("category") + "'order by a.post_id desc;"
+        if request.data.get("order") == "comment":
+            sql_statement1 = "select a.post_id, a.post_title, b.user_name, a.num_of_open, a.num_of_recommend, date_format(a.post_time,'%Y-%m-%d %H:%i') 시간, count(c.post_id) 댓글수 from post_data a left join comment_data c on a.post_id = c.post_id, user_data b where a.user_id = b.user_id and category = '" + request.data.get("category") + "' group by a.post_id order by 댓글수 desc;"
+        else:
+            sql_statement1 = "select a.post_id, a.post_title, b.user_name, a.num_of_open, a.num_of_recommend, date_format(a.post_time,'%Y-%m-%d %H:%i') 시간 from post_data a, user_data b where a.user_id = b.user_id and category = '" + request.data.get("category") + "' order by a." + request.data.get("order")+ ";"
         #게시글의 간략적인 정보들을 가져오는 쿼리문
         result = cursor.execute(sql_statement1)     
         data = cursor.fetchall()
@@ -799,22 +890,41 @@ class team_share(APIView):          #팀에 게시글 공유(url공유)
         return JsonResponse({'post_data':"작성이 완료되었습니다!"})
 
 
-############################################ 댓글
+############################################ 댓글 관련
 
 
 class comment_write(APIView):           #코맨트 작성
     def post(self,request):
         comment_data = CommentData()    #댓글 테이블 연결
-        comment_data.comment_cont = request.data.get("comment")
-        comment_data.user = UserData.objects.get(pk = request.data.get("id"))
-        comment_data.post = PostData.objects.get(pk = request.data.get("boardID"))
-        comment_data.comment_time = datetime.datetime.now()
+        comment_data.comment_cont = request.data.get("comment")     #댓글 내용
+        comment_data.user = UserData.objects.get(pk = request.data.get("id"))   #댓글 작성자
+        comment_data.post = PostData.objects.get(pk = request.data.get("boardID"))  #어느 게시글에 댓글이 달렸는가
+        comment_data.comment_time = datetime.datetime.now()         #댓글 작성 시간
         comment_data.save()
         #작성 이후 프론트로 코맨트들 정보 쏴주기
         cursor = connection.cursor()
         sql_statement = "select a.comment_id, a.comment_cont, b.user_name, date_format(a.comment_time,'%Y-%m-%d %H:%i') 작성시간, a.post_id, a.user_id from comment_data a, user_data b where a.user_id = b.user_id and post_id = '" + request.data.get("boardID") +"' order by a.comment_id desc;"
         result = cursor.execute(sql_statement)    
         data = cursor.fetchall()
+        #알림 보내기
+        comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
+        post_data = PostData.objects.get(pk = request.data.get("boardID"))  #해당 게시글에 대한 정보 불러오기
+        id_string1 = str(post_data.user)                                    #게시글을 작성한 유저의 아이디 가져오기
+        id_string2 = id_string1.replace('UserData object (', '')            #가져온 값 처리1
+        post_id = id_string2.replace(')','')                                #가져온 값 처리2(이유는 저장시 값이 UserData object('데이터')로 저장되기 때문)
+        #자기가 자기가 쓴 게시글에 댓글을 올린 경우에 대한 예외 처리
+        if post_id != request.data.get("id"):
+            comment_message.receiver_id = post_id                       #쪽지를 받는 사람 아이디 저장
+            title_string1 = str(post_data.post_title)                           #해당 게시글 제목
+            title_string2 = title_string1.replace('UserData object (', '')      #값을 처리하는 과정1
+            post_id = title_string2.replace(')','')                             #값을 처리하는 과정2(이유는 저장시 값이 UserData object('데이터')로 저장되기 때문)              
+            comment_message.title = "'" + post_id + "' 게시글에 댓글이 도착했습니다."   #이후 데이터 저장
+            comment_message.contents = request.data.get("comment")              #알림 내용
+            comment_message.category = "comment"                                #알림 종류
+            comment_message.receive_time = datetime.datetime.now()              #알림 시각
+            comment_message.about_chk = '1'
+            comment_message.save()
+
         return JsonResponse({'comment_data':data})
 
 
@@ -874,7 +984,7 @@ class team_post_file(APIView):     #파일 저장
         post_file = request.FILES.get('files')
         file_data = team_file()
         file_data.files = post_file
-        file_data.the_post_id = max_post_id['post_id__max']
+        file_data.the_post_id = max_post_id['post_id__max']     #파일 아이디값과 게시글 아이디값을 맞춰주기 위한 작업
         file_data.save()
 
         return JsonResponse({'message': '파일 업로드 성공'})
@@ -884,7 +994,7 @@ class download_file(APIView):     #파일 다운로드
     queryset = WebBackTeamFile.objects.all()
     def post(self,request):
         cursor = connection.cursor()
-        sql_statement = "select files from web_back_team_file where the_post_id = '" + request.data.get("post_id") + "';"
+        sql_statement = "select files from web_back_team_file where the_post_id = '" + request.data.get("post_id") + "';"   #해당 게시글에 연류된 파일 다운
         result = cursor.execute(sql_statement)
         data = cursor.fetchall()
         file_url = '../the_project/media/' + data[0][0]
@@ -894,9 +1004,71 @@ class download_file(APIView):     #파일 다운로드
         return response
 
 
-class unity_file(APIView):
+class unity_file(APIView):          #유니티 파일(메타버스 공간 파일 다운로드)
     def get(self, request):
         file_url = '../the_project/media/unity/4.zip'
         response = FileResponse(open(file_url, 'rb'))
         response['Content-Disposition'] = 'attachment;filename=4.zip'
         return response
+
+
+
+#쪽지함.
+class messege_list(APIView):
+    def post(self, request):
+        cursor = connection.cursor()
+        sql_statement = "select message_id,title,contents,date_format(receive_time,'%Y-%m-%d %H:%i') 알림시간, about_chk from message where receiver_id = '" + request.data.get("id") +"' order by 알림시간;"
+        #알람 목록
+        result2 = cursor.execute(sql_statement)     
+        data2 = cursor.fetchall()
+        data_list = []
+        for i in data2:
+            list_data = list(i)
+            data = False
+            list_data.append(data)
+            data_list.append(list_data)
+        message_read = Message.objects.filter(receiver_id = request.data.get("id"))
+        message_read.update(about_chk = '0')
+
+        return JsonResponse({'message_list':data_list})
+
+
+
+class delete_message(APIView):
+    def post(self, request):
+        message_data = Message.objects.get(message_id = request.data.get("message_id"))
+        message_data.delete()
+
+        cursor = connection.cursor()
+        sql_statement = "select message_id,title,contents,date_format(receive_time,'%Y-%m-%d %H:%i') 알림시간 from message where receiver_id = '" + request.data.get("id") +"' order by 알림시간;"
+        #알람 목록
+        result2 = cursor.execute(sql_statement)     
+        data2 = cursor.fetchall()
+        data_list = []
+        for i in data2:
+            list_data = list(i)
+            data = False
+            list_data.append(data)
+            data_list.append(list_data)
+
+        return JsonResponse({'message_list':data_list})
+
+
+class delete_messages(APIView):
+    def post(self, request):
+        message_data = Message.objects.filter(receiver_id = request.data.get("id"))     #복사-붙여넣기로 코드들을 참고해서 몰랐는데, get()은 값을 하나만 반환한다...
+        message_data.delete()
+
+        return JsonResponse({'message_message':'모든 메세지가 삭제되었습니다!'})
+
+
+class not_read_message(APIView):
+    def post(self,request):
+        sum_data = Message.objects.filter(receiver_id=request.data.get("id")).aggregate(Sum('about_chk'))
+        if type(sum_data['about_chk__sum']) == int:
+            return JsonResponse({'left_message':sum_data['about_chk__sum']})
+        return JsonResponse({'left_message':0})
+
+#이메일 인증 관련(공부중)
+#class email_confirm(APIView):     #파일 저장
+#    def post(self,request):

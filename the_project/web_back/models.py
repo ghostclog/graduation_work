@@ -136,3 +136,17 @@ class WebBackTeamFile(models.Model):
     class Meta:
         managed = False
         db_table = 'web_back_team_file'
+
+
+class Message(models.Model):
+    message_id = models.AutoField(primary_key=True)
+    receiver_id = models.CharField(max_length=50)
+    title = models.CharField(max_length=64)
+    contents = models.CharField(max_length=1024)
+    category = models.CharField(max_length=45)
+    receive_time = models.DateTimeField()
+    about_chk = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'message'
