@@ -5,3 +5,4 @@ the_project/django.key
 the_project/the_project/__pycache__/
 the_project/web_back/__pycache__/
 the_project/web_back/migrations/__pycache__/
+*.pyc
