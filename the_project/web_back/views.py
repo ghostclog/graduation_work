@@ -7,9 +7,12 @@ from PIL import Image
 from django.core.files.storage import FileSystemStorage
 from rest_framework.views import APIView
 from .models import *
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 import datetime
 import base64
+import random
 
 # Create your views here.
 ############################################ 로그인 관련
@@ -188,6 +191,12 @@ class list_of_my_comment(APIView):      #내가 쓴 댓글에 대하 목록
         data_list = cursor.fetchall()
         return JsonResponse({'post_list':data_list})
 
+
+class Withdrawal(APIView):
+    def post(self,request):
+        user_data = UserData.objects.filter(user_id = request.data.get("id"))
+        user_data.delete()
+        return JsonResponse({'return_data':'회원탈퇴가 완료 되었습니다!'})
 
 ############################################ 팀 관련
 
@@ -1069,6 +1078,67 @@ class not_read_message(APIView):
             return JsonResponse({'left_message':sum_data['about_chk__sum']})
         return JsonResponse({'left_message':0})
 
-#이메일 인증 관련(공부중)
-#class email_confirm(APIView):     #파일 저장
-#    def post(self,request):
+
+
+#이메일 관련
+class email_send(APIView):     #파일 저장
+    def post(self,request):
+        rand_num = random.random()
+        num = int(rand_num*1000000)
+        send_num = str(num).zfill(6)
+        recive_email = request.data.get("email")    #수신 이메일
+        number = {"number": send_num}       #발신 이메일 html에 값을 넣어주기1
+        html_mail = render_to_string("send_email.html", number)    #발신 이메일 html에 값을 넣어주기1
+        send_mail(
+            'Withrium에서 사용자 이메일 인증을 위해 발송한 메세지입니다.',
+            '1',
+            'lldp0506@naver.com',
+            [recive_email],
+            fail_silently=False,
+            html_message=html_mail
+        )
+        return JsonResponse({'sucess_message':send_num})
+
+
+class find_id(APIView):     #아이디 찾기
+    def post(self,request):
+        find_id_to_email = request.data.get("email")
+        finded_id = UserData.objects.filter(user_email = find_id_to_email).values('user_id')
+        if not bool(finded_id):
+            return JsonResponse({'id_message':'입력하신 이메일이 맞는 아이디가 없습니다.'})
+        return JsonResponse({'id_message':finded_id[0]['user_id']})        
+
+
+class find_password(APIView):
+    def post(self,request):
+        id = UserData.objects.filter(user_id = request.data.get("id")).values('user_id')
+        email = UserData.objects.filter(user_email = request.data.get("email")).values('user_id')
+        try:
+            if id[0]['user_id'] == email[0]['user_id']:
+                rand_num = random.random()
+                num = int(rand_num*1000000)
+                send_num = str(num).zfill(6)
+                recive_email = request.data.get("email")    #수신 이메일
+                number = {"number": send_num}       #발신 이메일 html에 값을 넣어주기1
+                html_mail = render_to_string("send_email.html", number)    #발신 이메일 html에 값을 넣어주기1
+                send_mail(
+                    'Withrium에서 비밀번호 변경에 대한 인증번호입니다.',        #메일 제목
+                    '1',                #메일 내용(html파일에 의해 실제로 메일에 표현되지 않음)
+                    'lldp0506@naver.com',       #발신인
+                    [recive_email],     #수신인
+                    fail_silently=False,
+                    html_message=html_mail      #html내용
+                )
+                return JsonResponse({'return_message':send_num})
+            else:
+                return JsonResponse({'return_message':'입력된 정보 중 아이디 혹은 이메일이 잘못됬습니다.'})
+        except:
+            return JsonResponse({'return_message':'입력된 정보 중 아이디 혹은 이메일이 잘못됬습니다.'})
+
+
+class find_password_after_change(APIView):
+    def post(self,request):
+        user_data = UserData.objects.get(user_id = request.data.get("id") )
+        user_data.user_pass = request.data.get("new_pw")
+        user_data.save()
+        return JsonResponse({'return_message':'비밀번호 수정이 완료 되었습니다!'})

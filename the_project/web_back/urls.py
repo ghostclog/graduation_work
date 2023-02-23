@@ -17,6 +17,7 @@ urlpatterns = [
     path('comment_ch/', views.user_comment_change.as_view() ,name='comment_change'),    #코맨트 변경
     path('list_of_my_post/', views.list_of_my_post.as_view() ,name='list_of_my_post'),      #내가 쓴 게시글들
     path('list_of_my_comment/', views.list_of_my_comment.as_view() ,name='list_of_my_comment'),     #내가 쓴 코맨트들
+    path('Withdrawal/', views.Withdrawal.as_view() ,name='Withdrawal'),     #회원 탈퇴
     
     #팀 관련(TU는 팀 유저(팀원)을 의미)
     path('make_team/', views.make_a_team.as_view() ,name='make_team'),      #팀 생성
@@ -75,4 +76,12 @@ urlpatterns = [
     path('delete_message/', views.delete_message.as_view() ,name='letter_box'),         #알림
     path('delete_messages/', views.delete_messages.as_view() ,name='letter_box'),         #알림
     path('not_read/', views.not_read_message.as_view() ,name='letter_box'),         #알림
+
+    #이메일 관련
+    path('send_mail/', views.email_send.as_view() ,name='letter_box'),
+
+    #아이디 혹은 비번 찾기
+    path('find_id/', views.find_id.as_view() ,name='letter_box'),      #아이디 찾기
+    path('find_pw/', views.find_password.as_view() ,name='letter_box'),      #비번 찾기
+    path('new_pass/', views.find_password_after_change.as_view() ,name='letter_box'),      #비번 찾기 후 비번 변경
 ]
