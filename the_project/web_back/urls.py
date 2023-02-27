@@ -35,6 +35,7 @@ urlpatterns = [
     path('team_chat/', views.chat_log.as_view() ,name='team_chat'),         #팀 채팅
     path('team_search/', views.search_team.as_view() ,name='team_search'),      #팀 검색
     path('delete_team/', views.delete_team.as_view() ,name='team_search'),      #팀 검색
+    path('withdraw_team/', views.out_team.as_view() ,name='team_search'),      #팀 검색
 
     #팀게시글 관련
     path('team_post_list/', views.team_post_list.as_view() ,name='team_post_list'),     #팀 게시글 목록

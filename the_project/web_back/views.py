@@ -192,11 +192,61 @@ class list_of_my_comment(APIView):      #내가 쓴 댓글에 대하 목록
         return JsonResponse({'post_list':data_list})
 
 
-class Withdrawal(APIView):
+class Withdrawal(APIView):          #회원 탈퇴
     def post(self,request):
-        user_data = UserData.objects.filter(user_id = request.data.get("id"))
-        user_data.delete()
-        return JsonResponse({'return_data':'회원탈퇴가 완료 되었습니다!'})
+        try:            #팀장인 경우 / 해당 팀관련 데이터 삭제
+            team_maker_data = TeamData.objects.filter(user = request.data.get("id")).values('team_name')    #프론트에서 쏴준 아이디가 만든 팀 리스트 생성
+            for i in team_maker_data:           #팀 리스트 하나하나 돌리기
+                user_data = TeamUserData.objects.filter(team_name = i['team_name'], is_admin = 0).values('user')    #해당 팀의 비 관리자 회원들에 대한 목록 받기
+                for i in user_data: #팀원 한명 한명 체크
+                    comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
+                    receiver_user = UserData.objects.filter(user_id = i['user']).values('user_id')  #해당 게시글에 대한 정보 불러오기
+                    comment_message.receiver_id = UserData.objects.get(pk = receiver_user[0]['user_id']) #쪽지를 받는 사람 아이디 저장
+                    comment_message.title = "팀이 삭제되었습니다."                     #이후 데이터 저장
+                    comment_message.contents = "'" + team_maker_data + "'팀이 삭제됨에 따라 팀에서 추방되었습니다."  #알림 내용
+                    comment_message.category = "fire_team"                                    #알림 종류
+                    comment_message.receive_time = datetime.datetime.now()                      #알림 시각
+                    comment_message.about_chk = '1'
+                    comment_message.save()
+
+                team_user_data = TeamUserData.objects.filter(team_name = i['team_name']) #팀원 삭제
+                team_user_data.delete()
+                team_post_data = TeamPost.objects.filter(team_name = i['team_name']) #팀 게시글 삭제
+                team_post_data.delete()
+                team_apply_data = TeamApplyLog.objects.filter(team_name = i['team_name'])    #팀 신청  로그 삭제
+                team_apply_data.delete()
+                team_chat_data = ChatData.objects.filter(team_name = i['team_name'])     #채팅데이터 삭제
+                team_chat_data.delete()
+                team_data = TeamData.objects.filter(team_name = i['team_name'])      #팀삭제
+                team_data.delete()
+        finally:
+            team_chat_data = ChatData.objects.filter(user_name = request.data.get("nickname"))  #채팅 작성자 변경
+            if bool(team_chat_data):
+                team_chat_data.delete()
+            team_post_data = TeamPost.objects.filter(user = request.data.get("id"))             #팀 게시글 작성자 변경
+            if bool(team_post_data):
+                team_post_data.delete()
+            user_team_datas = TeamUserData.objects.filter(user = request.data.get("id"))        #소속팀에서 탈퇴
+            if bool(user_team_datas):
+                user_team_datas.delete()
+            user_post_data = PostData.objects.filter(user = request.data.get("id"))             #포스트 작성자 변경
+            if bool(user_post_data):
+                user_post_data.update(user = 'plz_dont_login_this_account_로그인_하지_마세욨!')
+            user_comment_data = CommentData.objects.filter(user = request.data.get("id"))       #댓글 작성자 변경
+            if bool(user_comment_data):
+                user_comment_data.update(user = 'plz_dont_login_this_account_로그인_하지_마세욨!')
+            message_box_data = Message.objects.filter(receiver_id = request.data.get("id"))     #알림 삭제
+            if bool(message_box_data):
+                message_box_data.delete()   
+            apply_log_data = TeamApplyLog.objects.filter(user = request.data.get("id"))         #팀 신청기록 삭제
+            if bool(apply_log_data):
+                apply_log_data.delete()
+            profile_data = WebBackProfilePhoto.objects.filter(user = request.data.get("id"))    #프로필  사진 삭제
+            if bool(profile_data):
+                profile_data.delete()
+            user_data = UserData.objects.filter(user_id = request.data.get("id"))   #최종적으로 해당 회원 삭제
+            user_data.delete()
+            return JsonResponse({'return_data':'회원탈퇴가 완료 되었습니다!'})
 
 ############################################ 팀 관련
 
@@ -622,8 +672,6 @@ class search_team(APIView): #검색 기능
 
 class delete_team(APIView):
     def post(self,request):
-
-        #from web_back.models import * 
         user_data = TeamUserData.objects.filter(team_name =  request.data.get("teamname"), is_admin = 0).values('user')
         for i in user_data:
             comment_message = Message()     #쪽지함 관련 테이블(댓글 작성시 게시글 작성자에게 알림이 감)
@@ -651,6 +699,30 @@ class delete_team(APIView):
         team_data.delete()
 
         return JsonResponse({'return_data':'팀이 삭제되었습니다!'})
+
+
+class out_team(APIView):
+    def post(self,request):
+        team_chat_data = ChatData.objects.filter(user_name = request.data.get("nickname"))  #채팅 작성자 삭제
+        if bool(team_chat_data):
+            team_chat_data.delete()
+        team_post_data = TeamPost.objects.filter(user = request.data.get("id"))             #팀 게시글 작성자 삭제
+        if bool(team_post_data):
+            team_post_data.delete()
+        user_data = TeamUserData.objects.filter(team_name =  request.data.get("teamname"), user = request.data.get("id"))
+        user_data.delete()      #팀탈퇴
+        #from web_back.models import *
+        #아니 메세지 왜 안감???
+        team_master_id = TeamUserData.objects.filter(team_name =  request.data.get("teamname"), is_admin = 1).values('user')    #팀장 아이디 저장
+        team_master_data = Message()
+        team_master_data.receiver_id = team_master_id[0]['user']
+        team_master_data.title = '팀원 탈퇴'
+        team_master_data.contents = request.data.get("id") + '님이 ' + request.data.get("teamname") + '을 탈퇴 했습니다.'
+        team_master_data.category = 'teammember_out'
+        team_master_data.receive_time = datetime.datetime.now()
+        team_master_data.about_chk = 1
+        team_master_data.save()
+        return JsonResponse({'return_data':'팀에서 탈퇴했습니다!'})
 
 
 
@@ -1138,7 +1210,10 @@ class find_password(APIView):
 
 class find_password_after_change(APIView):
     def post(self,request):
-        user_data = UserData.objects.get(user_id = request.data.get("id") )
-        user_data.user_pass = request.data.get("new_pw")
+        old_pass = UserData.objects.filter(user_id = request.data.get("id")).values('user_pass')
+        if old_pass[0]['user_pass'] == request.data.get("password"):
+            return JsonResponse({'return_message':'새로 입력하신 비밀번호는 기존에 사용하던 것과 같습니다!'})
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_pass = request.data.get("password")
         user_data.save()
         return JsonResponse({'return_message':'비밀번호 수정이 완료 되었습니다!'})
