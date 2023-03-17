@@ -18,6 +18,7 @@ urlpatterns = [
     path('list_of_my_post/', views.list_of_my_post.as_view() ,name='list_of_my_post'),      #내가 쓴 게시글들
     path('list_of_my_comment/', views.list_of_my_comment.as_view() ,name='list_of_my_comment'),     #내가 쓴 코맨트들
     path('Withdrawal/', views.Withdrawal.as_view() ,name='Withdrawal'),     #회원 탈퇴
+    path('item_list/', views.item_list.as_view() ,name='item_list'),     #회원 탈퇴
     
     #팀 관련(TU는 팀 유저(팀원)을 의미)
     path('make_team/', views.make_a_team.as_view() ,name='make_team'),      #팀 생성
@@ -46,7 +47,6 @@ urlpatterns = [
     path('delete_team_post/', views.delete_team_post.as_view() ,name='delete_team_post'),   #팀 게시글 삭제
     path('modify_team_post_button/', views.modify_team_post_button.as_view() ,name='modify_team_post_button'),      #팀 게시글 수정하기 버튼
     path('modify_team_post/', views.modify_team_post.as_view() ,name='modify_team_post'),       #팀 게시글 수정 완료 버튼
-
 
     #게시글 관련
     path('post_test/', views.post_list.as_view() ,name='post_list'),    #게시글 목록
@@ -85,4 +85,9 @@ urlpatterns = [
     path('find_id/', views.find_id.as_view() ,name='letter_box'),      #아이디 찾기
     path('find_pw/', views.find_password.as_view() ,name='letter_box'),      #비번 찾기
     path('new_pass/', views.find_password_after_change.as_view() ,name='letter_box'),      #비번 찾기 후 비번 변경
+
+    #아이탬 구매
+    path('before_buy/', views.before_buy.as_view() ,name='buy_item'),      #아이탬 구매 전 상세명세서 제공을 위한 코드
+    path('buy_item/', views.buy_item.as_view() ,name='buy_item'),      #아이탬 구매
+    path('buy_randombox/', views.buy_randombox.as_view() ,name='buy_randombox'),      #아이탬 구매
 ]

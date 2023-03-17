@@ -36,6 +36,7 @@ class user_regist(APIView):     #회원가입
                 data_table.user_comment = '아직 소개말이 입력되지 않았습니다.'
                 data_table.user_admin = '0'     #관리자 여부
                 data_table.login_state = '0'    #접속 여부
+                data_table.user_point = '10'
                 data_table.save()               #입력된 데이터 저장
 
                 return JsonResponse({'reg_message':'회원가입 성공!'},status=200)
@@ -120,8 +121,8 @@ class into_mypage(APIView):      #비밀번호 변경
     def post(self,request):
         cursor = connection.cursor()
         #장고의 데이터베이스 연결 방식에서 파이썬 특유의 데이터베이스 연결 방식으로 코드를 바꿔봄.
-        #사용해본 결과 데이터 입력 시에는 orm이 편한데. select문에 한해서는 쿼리문이 더편함
-        sql_statement1 = "select user_email, user_comment from user_data where user_id ='" + request.data.get("id") + "';"       #입력한 아이디값에 맞는 이메일과 소개문을 반환
+        #예전에 작성한 코드들의 경우 orm에 대한 숙련도가 없어서 sql문 사용했고, 최근 코드의 경우 orm으로 입출력함
+        sql_statement1 = "select user_email, user_comment, user_point from user_data where user_id ='" + request.data.get("id") + "';"       #입력한 아이디값에 맞는 이메일과 소개문을 반환
         result1 = cursor.execute(sql_statement1)      #코드 실행
         data1 = cursor.fetchall()                   #실행 결과 입력
 
@@ -247,6 +248,14 @@ class Withdrawal(APIView):          #회원 탈퇴
             user_data = UserData.objects.filter(user_id = request.data.get("id"))   #최종적으로 해당 회원 삭제
             user_data.delete()
             return JsonResponse({'return_data':'회원탈퇴가 완료 되었습니다!'})
+        
+class item_list(APIView):      #아이탬 소지 목록
+    def post(self,request):
+        user_have_item_list = UserItemLog.objects.filter(user_id = request.data.get("id")).values('item_id')
+        data_list = []
+        for i in user_have_item_list:
+            data_list.append(i['item_id'])
+        return JsonResponse({'item_list':data_list})
 
 ############################################ 팀 관련
 
@@ -275,6 +284,12 @@ class make_a_team(APIView):      #팀 생성
         
         team_user_data.is_admin = '1'
         team_user_data.save()
+        #팀 생성시 포인트를 주기 위한 코드
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = int(old_user_point) + 10
+        user_data.save()
         
         return JsonResponse({'chk_message':'팀 생성이 완료되었습니다.'})
 
@@ -711,8 +726,6 @@ class out_team(APIView):
             team_post_data.delete()
         user_data = TeamUserData.objects.filter(team_name =  request.data.get("teamname"), user = request.data.get("id"))
         user_data.delete()      #팀탈퇴
-        #from web_back.models import *
-        #아니 메세지 왜 안감???
         team_master_id = TeamUserData.objects.filter(team_name =  request.data.get("teamname"), is_admin = 1).values('user')    #팀장 아이디 저장
         team_master_data = Message()
         team_master_data.receiver_id = team_master_id[0]['user']
@@ -768,6 +781,13 @@ class write_team_post(APIView):         #팀 게시글 작성 코드(일반 게�
         post_data.team_name = TeamData.objects.get(team_name = request.data.get("teamname"))
         post_data.post_type = request.data.get("post_type")
         post_data.save()
+
+        #팀 생성시 포인트를 주기 위한 코드
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = int(old_user_point) + 2
+        user_data.save()
 
         return JsonResponse({'message': '게시글 작성이 완료되었습니다!'})
 
@@ -902,7 +922,15 @@ class write_post(APIView):                                                      
         #mysql의 디폴트 값이 백엔드 부분에서는 사용이 안됨.
         post_data.num_of_open = 0       #조회수
         post_data.num_of_recommend = 0  #추천수
-        post_data.save()             
+        post_data.save()     
+
+        #팀 생성시 포인트를 주기 위한 코드
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = int(old_user_point) + 2
+        user_data.save()
+
         return JsonResponse({'post_data':"작성이 완료되었습니다!"})
 
 
@@ -955,6 +983,14 @@ class info_share(APIView):
         post_data.num_of_open = 0       #조회수
         post_data.num_of_recommend = 0  #추천수
         post_data.save()
+
+        #팀 생성시 포인트를 주기 위한 코드
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = int(old_user_point) + 2
+        user_data.save()
+
         return JsonResponse({'post_data':"작성이 완료되었습니다!"})
 
 
@@ -967,7 +1003,15 @@ class team_share(APIView):          #팀에 게시글 공유(url공유)
         post_data.post_title = request.data.get("title")                                        #제목
         post_data.team_name = TeamData.objects.get(pk = request.data.get("teamname"))           #공유할 팀 이름                         
         post_data.post_type = 'share'                                                           #공유(프론트에서 폼의 차이를 주기 위해)
-        post_data.save()    
+        post_data.save()
+
+        #팀 생성시 포인트를 주기 위한 코드
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = int(old_user_point) + 2
+        user_data.save()
+
         return JsonResponse({'post_data':"작성이 완료되었습니다!"})
 
 
@@ -1006,6 +1050,13 @@ class comment_write(APIView):           #코맨트 작성
             comment_message.about_chk = '1'
             comment_message.save()
 
+        #팀 생성시 포인트를 주기 위한 코드
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = int(old_user_point) + 1
+        user_data.save()
+
         return JsonResponse({'comment_data':data})
 
 
@@ -1036,7 +1087,7 @@ class comment_change(APIView):              #댓글 수정
         return JsonResponse({'message':"댓글이 수정되었습니다.",'comment_data':data2})
 
 
-############################################ 파일 업로드 관련(진행중)
+############################################ 파일 업로드 관련
 
 
 class set_profile(APIView):     #프로필 사진 변경
@@ -1207,7 +1258,6 @@ class find_password(APIView):
         except:
             return JsonResponse({'return_message':'입력된 정보 중 아이디 혹은 이메일이 잘못됬습니다.'})
 
-
 class find_password_after_change(APIView):
     def post(self,request):
         old_pass = UserData.objects.filter(user_id = request.data.get("id")).values('user_pass')
@@ -1217,3 +1267,81 @@ class find_password_after_change(APIView):
         user_data.user_pass = request.data.get("password")
         user_data.save()
         return JsonResponse({'return_message':'비밀번호 수정이 완료 되었습니다!'})
+    
+
+
+############################################ 포인트 상점 관련
+#구매 전 포인트 명세서
+class before_buy(APIView):
+    def post(self,request):
+        user_have_point = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        return JsonResponse({'have_point':user_have_point[0]['user_point']})
+
+#아이탬 구매 확정
+class buy_item(APIView):
+    def post(self,request):
+        #아이탬 갖고 있을경우에 대한 부분처리
+        chk = UserItemLog.objects.all()
+        if chk.filter(user = request.data.get("id"), item_id = request.data.get("item_id")).exists():
+            return JsonResponse({'return_message':'이미 보유중인 아이탬입니다!'})
+        user_have_point = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')    #갖고 있는 포인트가 부족한 경우
+        #이 부분은 프론트단에서 처리해서 주석처리
+        #if request.data.get("item_cost") > user_have_point[0]['user_point']:
+        #    minus_coin = request.data.get("item_cost") - user_have_point
+        #    message = '갖고 계신 포인트가' + minus_coin + '부족합니다!'
+        #    return JsonResponse({'return_message':message})
+        #구매에 따른 포인트 차감
+        left_point = int(user_have_point[0]['user_point']) - int(request.data.get("item_cost"))
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = left_point
+        user_data.save()
+
+        #그 밖의 아이탬 구매 로그 추가
+        item_data = UserItemLog()
+        item_data.user = UserData.objects.get(user_id = request.data.get("id")) #구매한 유저
+        item_data.item_id = request.data.get("item_id")
+        item_data.item_category = request.data.get("item_category")
+        item_data.save()
+
+        return JsonResponse({'return_message':'구매 완료!'})
+
+
+class buy_randombox(APIView):#가챠 돌린거 결과 저장
+    def post(self,request):
+        #비용 지불 관련 코드
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        user_data = UserData.objects.get(user_id = request.data.get("id"))
+        user_data.user_point = int(old_user_point) - 50
+        user_data.save()
+        #중복된 아이탬이 가챠 결과로 뜰 경우
+        chk = UserItemLog.objects.all()
+        if chk.filter(user = request.data.get("id"), item_id = request.data.get("item_id")).exists():
+            user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+            old_user_point = user_data[0]['user_point']
+            user_data = UserData.objects.get(user_id = request.data.get("id"))
+            user_data.user_point = int(old_user_point) + 50
+            user_data.save()
+            #이후 결과값 전송
+            user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+            old_user_point = user_data[0]['user_point']
+            return JsonResponse({'return_point':int(old_user_point),'return_message':'이미 보유중인 아이탬입니다!'})
+        #가챠 보상이 포인트인경우
+        if request.data.get("item_category") == 'Point':
+            user_have_point = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+            user_data.user_point = int(user_have_point[0]['user_point']) + int(request.data.get("item_id"))
+            user_data.save()
+            #이후 결과값 전송
+            user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+            old_user_point = user_data[0]['user_point']
+            return JsonResponse({'return_point':int(old_user_point)})
+        #중복되지 않은 가챠 결과 저장
+        item_data = UserItemLog()
+        item_data.user = UserData.objects.get(user_id = request.data.get("id")) #구매한 유저
+        item_data.item_id = request.data.get("item_id")
+        item_data.item_category = request.data.get("item_category")
+        item_data.save()
+        #이후 결과값 전송
+        user_data = UserData.objects.filter(user_id = request.data.get("id")).values('user_point')
+        old_user_point = user_data[0]['user_point']
+        return JsonResponse({'return_point':int(old_user_point)})

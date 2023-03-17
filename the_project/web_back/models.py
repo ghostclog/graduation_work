@@ -100,6 +100,7 @@ class UserData(models.Model):
     login_state = models.CharField(max_length=1, blank=True, null=True)
     user_email = models.CharField(max_length=512)
     user_comment = models.CharField(max_length=1024, blank=True, null=True)
+    user_point = models.CharField(max_length=45, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -150,3 +151,15 @@ class Message(models.Model):
     class Meta:
         managed = False
         db_table = 'message'
+
+
+
+class UserItemLog(models.Model):
+    log_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(UserData, models.DO_NOTHING)
+    item_id = models.CharField(max_length=45)
+    item_category = models.CharField(max_length=45)
+
+    class Meta:
+        managed = False
+        db_table = 'user_item_log'
