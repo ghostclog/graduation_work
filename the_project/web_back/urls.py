@@ -18,7 +18,7 @@ urlpatterns = [
     path('list_of_my_post/', views.list_of_my_post.as_view() ,name='list_of_my_post'),      #내가 쓴 게시글들
     path('list_of_my_comment/', views.list_of_my_comment.as_view() ,name='list_of_my_comment'),     #내가 쓴 코맨트들
     path('Withdrawal/', views.Withdrawal.as_view() ,name='Withdrawal'),     #회원 탈퇴
-    path('item_list/', views.item_list.as_view() ,name='item_list'),     #회원 탈퇴
+    path('item_list/', views.item_list.as_view() ,name='item_list'),     #아이템 목록
     
     #팀 관련(TU는 팀 유저(팀원)을 의미)
     path('make_team/', views.make_a_team.as_view() ,name='make_team'),      #팀 생성

@@ -144,7 +144,7 @@ class into_mypage(APIView):      #비밀번호 변경
         #여기서부터는 회원이 가입한 팀의 목록에 대한 것들
         data2 = []
 
-        sql_statement2 = "select team_name from team_user_data where user_id = '" + request.data.get("id") + "';"  #해당 유저가 속한 팀의 리스트를 보여주는 코드.
+        sql_statement2 = "select team_name from team_user_data where user_id = '" + request.data.get("id") + "' order by team_name;"  #해당 유저가 속한 팀의 리스트를 보여주는 코드.
         result2 = cursor.execute(sql_statement2)      #코드 실행
         in_team = cursor.fetchall()                   #실행 결과 입력
 
