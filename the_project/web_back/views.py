@@ -251,7 +251,7 @@ class Withdrawal(APIView):          #회원 탈퇴
         
 class item_list(APIView):      #아이탬 소지 목록
     def post(self,request):
-        user_have_item_list = UserItemLog.objects.filter(user_id = request.data.get("id")).values('item_id')
+        user_have_item_list = UserItemLog.objects.filter(user_id = request.data.get("id")).values('item_id').order_by('item_id')
         data_list = []
         for i in user_have_item_list:
             data_list.append(i['item_id'])
