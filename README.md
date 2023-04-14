@@ -4,3 +4,6 @@
 django rest framework 사용 / mysql 사용
 
 프론트부분은 react를 사용하고 있으며, 런처 부분은 유니티를 사용중임.
+
+
+도메인은 'withriumback.shop'을 이용중.
