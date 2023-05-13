@@ -25,8 +25,6 @@ class user_regist(APIView):     #회원가입
                 return JsonResponse({'chk_message':'아이디 중복입니다.'},status=200)
             if chk.filter(user_name = request.data.get("nickname")).exists():       #닉네임 중복체크
                 return JsonResponse({'chk_message':'닉네임 중복입니다.'},status=200)
-            if chk.filter(user_email = request.data.get("email")).exists():       #닉네임 중복체크
-                return JsonResponse({'chk_message':'이메일 중복입니다.'},status=200)
             else:       #모든 중복 체크 통과시
                 data_table.user_id = request.data.get("id")             #아이디 저장
                 data_table.user_pass = request.data.get("pw")           #비밀번호 저장
@@ -1204,8 +1202,11 @@ class not_read_message(APIView):
 
 
 #이메일 관련
-class email_send(APIView):     #파일 저장
+class email_send(APIView):
     def post(self,request):
+        chk = UserData.objects.all()        #유저 테이블의 모든 객체를 가져옴
+        if chk.filter(user_email = request.data.get("email")).exists():       #닉네임 중복체크
+            return JsonResponse({'error_message':'이메일 중복입니다.'},status=200)
         rand_num = random.random()
         num = int(rand_num*1000000)
         send_num = str(num).zfill(6)
@@ -1220,7 +1221,8 @@ class email_send(APIView):     #파일 저장
             fail_silently=False,
             html_message=html_mail
         )
-        return JsonResponse({'sucess_message':send_num})
+        return JsonResponse({'success_message':send_num})
+                
 
 
 class find_id(APIView):     #아이디 찾기
