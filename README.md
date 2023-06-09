@@ -18,6 +18,34 @@ web_back 디랙토리에 모든 url와 view 코드가 들어있음.
 
 ==========
 
+사용한 파이썬 라이브러리
+
+asgiref==3.6.0
+astroid==2.12.13
+colorama==0.4.6
+dill==0.3.6
+distlib==0.3.6
+Django==4.1.4
+django-cors-headers==3.13.0
+djangorestframework==3.14.0
+filelock==3.8.2
+isort==5.11.4
+lazy-object-proxy==1.8.0
+mccabe==0.7.0
+mod-wsgi==4.9.4
+mysqlclient==2.1.1
+Pillow==9.4.0
+platformdirs==2.6.0
+pylint==2.15.9
+pytz==2022.7.1
+sqlparse==0.4.3
+tomlkit==0.11.6
+tzdata==2022.7
+virtualenv==20.17.1
+wrapt==1.14.1
+
+==========
+
 데이터베이스 구조
 
 사용한 DBMS: mysql 8.0
